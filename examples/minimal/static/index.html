@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Singleserve lifecycle demo</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main
+      id="app"
+      data-heartbeat-timeout-ms="__HEARTBEAT_TIMEOUT_MS__"
+      data-disconnect-grace-ms="__DISCONNECT_GRACE_MS__"
+      data-check-interval-ms="__CHECK_INTERVAL_MS__"
+    >
+      <header>
+        <div>
+          <p class="eyebrow">Live lifecycle demonstration</p>
+          <h1>Singleserve lifecycle demo</h1>
+          <p class="subtitle">Watch the heartbeat, stop the Go process, close the last tab, or shut down below.</p>
+        </div>
+        <span id="connection" class="status waiting" role="status" aria-live="polite">Connecting</span>
+      </header>
+
+      <section class="heartbeat" aria-labelledby="heartbeat-heading">
+        <span id="pulse" class="pulse" aria-hidden="true"></span>
+        <div class="heartbeat-copy">
+          <span id="heartbeat-heading" class="label">Lifecycle heartbeat</span>
+          <strong id="heartbeat-state">Waiting for the first heartbeat…</strong>
+          <span id="heartbeat-detail" class="detail">The client sends an authenticated heartbeat automatically.</span>
+        </div>
+        <div class="heartbeat-time">
+          <span class="label">Next heartbeat</span>
+          <strong id="next-heartbeat">—</strong>
+        </div>
+      </section>
+
+      <section class="grid" aria-label="Lifecycle timings">
+        <article>
+          <h2>Backend process stops</h2>
+          <span id="detection-window" class="metric">Calculating…</span>
+          <p class="detail">The frontend declares the backend unavailable after three consecutive failed heartbeats.</p>
+          <div id="failure-dots" class="failure-dots" aria-label="0 of 3 heartbeat failures">
+            <span></span><span></span><span></span>
+          </div>
+        </article>
+
+        <article>
+          <h2>Last browser tab closes</h2>
+          <span id="close-window" class="metric">Calculating…</span>
+          <p id="close-detail" class="detail">The last tab sends a disconnect during page hide; heartbeat expiry is the fallback.</p>
+        </article>
+
+        <article>
+          <h2>Requests are observable</h2>
+          <span id="request-observed" class="metric">Waiting…</span>
+          <p class="detail">Heartbeat events appear below. Run an extra authenticated health check whenever you like.</p>
+        </article>
+      </section>
+
+      <div class="actions" aria-label="Demo actions">
+        <button id="health" type="button" disabled>Run health check now</button>
+        <button id="shutdown" class="primary" type="button" disabled>Shut down backend</button>
+        <p id="health-result" class="action-status" role="status" aria-live="polite">Health checks and shutdown events appear in the event log.</p>
+      </div>
+
+      <section class="events" aria-labelledby="events-heading">
+        <div class="events-heading">
+          <h2 id="events-heading">Event timeline</h2>
+          <span id="event-count" class="event-count">0 events</span>
+        </div>
+        <ol id="event-list" aria-live="polite"></ol>
+      </section>
+
+      <section id="terminal" class="terminal" role="alert" hidden>
+        <h2 id="terminal-heading">Backend stopped</h2>
+        <p id="terminal-detail">Singleserve attempted to close this tab.</p>
+        <p class="hint">Browsers usually block scripts from closing a tab opened by the operating system. If this page remains, close the tab yourself.</p>
+        <button id="close-tab" type="button">Try closing this tab</button>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

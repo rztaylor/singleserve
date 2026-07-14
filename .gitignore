@@ -1,0 +1,4 @@
+.cache/
+.agents/skills
+coverage.out
+dist/
