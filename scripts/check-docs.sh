@@ -63,7 +63,7 @@ done
 
 grep -q 'module github.com/rztaylor/singleserve' go.mod
 grep -q 'Status: \*\*Released in v0.1.0\*\*' docs/dev/specs/v0.1-api.md
-grep -q 'Status: \*\*Implemented; unreleased\*\*' docs/dev/specs/v0.2-api.md
+grep -q 'Status: \*\*Released in v0.2.0; maintained for v0.2.x\*\*' docs/dev/specs/v0.2-api.md
 grep -q 'Launch.NewBootstrapURL()' docs/dev/specs/v0.2-api.md
 grep -q '^No active items\.' docs/dev/roadmap.md
 grep -q 'MIT License' LICENSE
