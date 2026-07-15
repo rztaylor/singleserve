@@ -4,11 +4,11 @@
 
 | Version | Status |
 | --- | --- |
-| v0.2.0 source | Implemented but unreleased and unsupported until a matching tag exists |
-| v0.1.x | Supported; see the browser-client limitation below |
+| v0.2.x | Supported |
+| v0.1.x | Unsupported; see the browser-client limitations below |
 | Earlier | Unsupported |
 
-`v0.1.0` is the first supported tag. Published tags are immutable. If a supported release is unsafe, the project will document the impact and publish a new corrective version rather than moving or silently replacing a tag.
+`v0.2.0` is the first release of the hardened browser-authentication contract. Published tags are immutable. If a supported release is unsafe, the project will document the impact and publish a new corrective version rather than moving or silently replacing a tag.
 
 ## Reporting a vulnerability
 
@@ -30,8 +30,8 @@ The v0.1.0 canonical browser client stores the reusable launch capability in per
 
 Additionally, v0.1.0 uses a host-scoped session cookie on a random loopback port. Cookie names are launch-unique, but HTTP cookies do not provide port isolation, so another service on the same loopback host can receive the cookie if the browser visits it. Consumers requiring a no-Web-Storage or mutually distrusting sibling-loopback contract should not treat v0.1.0 as satisfying that requirement.
 
-## Unreleased v0.2.0 hardening
+## v0.2 hardening
 
-The repository's v0.2.0 implementation removes browser-readable credential persistence and public token exposure. It introduces a one-time fragment bootstrap owned by Singleserve, owner-controlled rotation through `Launch.NewBootstrapURL`, independent browser-session and programmatic credentials, a high-entropy per-launch `.localhost` origin, a Secure host-only `__Host-` session cookie, exact Host and authentication-mode-specific Origin validation, a no-proxy origin-bound `Launch.Client`, non-shell opener commands, bounded control requests, and mandatory browser/vulnerability/static-analysis release gates. Renewal replaces the single active unconsumed capability for two minutes; it never makes the initial URL indefinite or extends server lifetime. No legacy Web Storage mode exists.
+The released v0.2 contract removes browser-readable credential persistence and public token exposure. It introduces a one-time fragment bootstrap owned by Singleserve, owner-controlled rotation through `Launch.NewBootstrapURL`, independent browser-session and programmatic credentials, a high-entropy per-launch `.localhost` origin, a Secure host-only `__Host-` session cookie, exact Host and authentication-mode-specific Origin validation, a no-proxy origin-bound `Launch.Client`, non-shell opener commands, bounded control requests, and mandatory browser/vulnerability/static-analysis release gates. Renewal replaces the single active unconsumed capability for two minutes; it never makes the initial URL indefinite or extends server lifetime. No legacy Web Storage mode exists.
 
 The session cookie is `HttpOnly`, which prevents direct JavaScript reads but cannot prevent trusted same-origin consumer JavaScript from issuing authenticated requests. Consumer code intentionally supplied through `Options.Handler`, compromised browsers/extensions, process-memory readers, and actors who already possess the complete launch URL are outside the preventable boundary. The high-entropy hostname isolates the cookie from ordinary sibling loopback origins, while the `__Host-` rules reject parent-domain injection; the hostname is capability-adjacent and must be protected with the bootstrap URL.

@@ -13,4 +13,4 @@
 - Do not add speculative configuration or consumer-domain abstractions.
 - Public examples must compile once implementation exists.
 - Runtime behavior changes must remain within the greenlit v0.1 specification or update the specification and decision log in the same review.
-- The v0.2.0 security implementation follows `docs/dev/specs/v0.2-api.md`; candidate evidence and release authorization are governed by the release facts and release governance.
+- The released v0.2 security contract follows `docs/dev/specs/v0.2-api.md`; patch-candidate evidence and release authorization are governed by the release facts and release governance.

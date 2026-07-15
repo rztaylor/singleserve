@@ -15,6 +15,7 @@ import (
 
 	"github.com/rztaylor/singleserve"
 	"github.com/rztaylor/singleserve/internal/testbrowserjar"
+	"github.com/rztaylor/singleserve/internal/testtransport"
 )
 
 const smokeTimeout = 5 * time.Second
@@ -45,9 +46,7 @@ func TestSmoke(t *testing.T) {
 	}
 	baseURL := (&url.URL{Scheme: parsed.Scheme, Host: parsed.Host, Path: "/"}).String()
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = nil
-	client := &http.Client{Jar: testbrowserjar.New(), Timeout: smokeTimeout, Transport: transport}
+	client := &http.Client{Jar: testbrowserjar.New(), Timeout: smokeTimeout, Transport: testtransport.New()}
 	response := request(t, client, http.MethodGet, launchURL, nil)
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("bootstrap page status = %d", response.StatusCode)

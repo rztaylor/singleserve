@@ -2,7 +2,7 @@
 
 ## Current state
 
-`v0.1.0` is the current supported module release. Security-only v0.2.0 is implemented and in release preparation. Two repository-owned public-API compatibility harnesses cover browser-bound and explicit-lifetime applications.
+`v0.2.x` is the current supported module line. Two repository-owned public-API compatibility harnesses cover browser-bound and explicit-lifetime applications.
 
 ## Prerequisites
 
@@ -19,7 +19,7 @@ Ordinary checks require no network, npm install, Docker, database, browser, or e
 ```sh
 scripts/check-docs.sh
 scripts/check.sh
-SINGLESERVE_BROWSER_BACKEND=playwright SINGLESERVE_BROWSER_NAME=chromium scripts/release-check.sh v0.2.0
+SINGLESERVE_BROWSER_BACKEND=playwright SINGLESERVE_BROWSER_NAME=chromium scripts/release-check.sh v0.2.1
 go run ./examples/minimal
 ```
 
@@ -42,8 +42,8 @@ In managed sandboxes use the scripts, which set writable repository-local Go cac
 - Never include real launch tokens in docs, logs, test failures, or fixtures.
 - Never store browser authentication capabilities in Web Storage or expose them through public JavaScript state.
 - Do not treat a random loopback port as cookie isolation. Validate the effective Host and prove isolation from sibling loopback services.
-- Browser security behavior requires one exact-candidate repository-owned Playwright Chromium result for v0.2.0; CI is preferred and a recorded local run is accepted, while missing local browser automation does not block development.
+- Browser security behavior requires one exact-candidate repository-owned Playwright Chromium result for v0.2.x releases; CI is preferred and a recorded local run is accepted, while missing local browser automation does not block development.
 
 ## Documentation workflow
 
-Behavior changes update the applicable normative versioned spec first or in the same change. Ownership changes update architecture. Public compatibility and support changes update the changelog, decisions, and release governance. New planned work belongs in the active roadmap rather than a release history. No implementation plan is active during v0.2.0 release preparation; unrelated features remain deferred.
+Behavior changes update the applicable normative versioned spec first or in the same change. Ownership changes update architecture. Public compatibility and support changes update the changelog, decisions, and release governance. New planned work belongs in the active roadmap rather than a release history. No implementation plan is active during v0.2.x maintenance; unrelated features remain deferred.

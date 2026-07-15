@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-15
+
+### Fixed
+
+- Made `Launch.Client()` dial the bound loopback listener directly while preserving the isolated `.localhost` request origin, so programmatic requests work on Windows systems whose DNS stack does not resolve `*.localhost`.
+- Made repository-owned browser HTTP harnesses resolve `.localhost` origins without relying on platform DNS, restoring the Windows package-test gate and preventing a failed initial request from stalling the suite until Go's global timeout.
+
 ## [0.2.0] - 2026-07-15
 
 ### Security
@@ -54,6 +61,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Runnable `examples/minimal` executable specification with a live lifecycle dashboard, one application API, browser launch, observable heartbeat/health timing, backend and tab-close detection windows, terminal stopped state, shutdown, and CI smoke coverage using only the public API.
 - Browser-client `onHeartbeat` observation callback with status, consecutive failure count, tab ID, and completion timestamp for lifecycle presentation without duplicating heartbeat scheduling.
 
-[Unreleased]: https://github.com/rztaylor/singleserve/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/rztaylor/singleserve/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/rztaylor/singleserve/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/rztaylor/singleserve/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rztaylor/singleserve/releases/tag/v0.1.0

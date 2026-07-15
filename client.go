@@ -1,7 +1,9 @@
 package singleserve
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,17 +38,23 @@ func (t *launchTransport) CloseIdleConnections() {
 }
 
 // Client returns an HTTP client authenticated only for this launch origin.
-// The client bypasses environment proxies and never exposes its credential.
+// The client bypasses environment proxies, dials the bound listener directly,
+// and never exposes its credential.
 func (l *Launch) Client() *http.Client {
 	if l == nil || l.server == nil {
 		return nil
 	}
 	l.server.mu.Lock()
 	origin := strings.TrimSuffix(l.server.baseURL, "/")
+	address := l.server.httpServer.Addr
 	token := l.server.programToken
 	l.server.mu.Unlock()
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
+	dialer := &net.Dialer{}
+	transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+		return dialer.DialContext(ctx, network, address)
+	}
 	return &http.Client{
 		Transport: &launchTransport{base: transport, origin: origin, token: token},
 		CheckRedirect: func(request *http.Request, via []*http.Request) error {

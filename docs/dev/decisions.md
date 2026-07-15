@@ -126,7 +126,7 @@ The implementation greenlight accepted the following choices. They are now part 
 ### Fragment bootstrap, owner-controlled renewal, and private programmatic client
 
 - **Decision:** put the independent two-minute bootstrap capability in the URL fragment, exchange it from a fixed Singleserve-owned page, consume it atomically, and provide `Launch.NewBootstrapURL()` so trusted owner code can rotate the single active capability and reset its full two-minute window without changing server lifetime or browser-session state. Expose programmatic access through a launch-bound `http.Client` whose credential is not returned to callers.
-- **Why:** fragments do not enter HTTP request targets or referrers. The fixed page can scrub the fragment before any consumer code runs. Explicit rotation preserves a short exposure window while allowing a consumer to recover immediately from a browser-opener failure. A launch-bound client can enforce exact origin and bypass environment proxies while keeping the programmatic secret private.
+- **Why:** fragments do not enter HTTP request targets or referrers. The fixed page can scrub the fragment before any consumer code runs. Explicit rotation preserves a short exposure window while allowing a consumer to recover immediately from a browser-opener failure. A launch-bound client can enforce exact origin, bypass environment proxies, and dial the known listener without relying on platform `.localhost` DNS while keeping the programmatic secret private.
 - **Rejected:** query-token redirects that still place the capability in HTTP request targets; an indefinitely valid or lifetime-configurable initial bootstrap; automatic renewal; a public `Launch.Token()`; continued bearer authentication; asking callers to parse `Launch.URL()`.
 
 ### High-entropy localhost origin
@@ -151,4 +151,4 @@ The implementation greenlight accepted the following choices. They are now part 
 
 None of these questions should delay v0.1 implementation or add speculative API now.
 
-They remain deferred during the security-only v0.2.0 work unless the active security ExecPlan explicitly promotes one as necessary to close a security gap.
+They remain deferred during v0.2.x security maintenance unless a future approved roadmap item promotes one with its own scope and evidence.

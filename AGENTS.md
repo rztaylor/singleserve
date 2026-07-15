@@ -1,6 +1,6 @@
 # Repository Instructions
 
-Singleserve is a public Go library for single-binary, browser-based local applications. v0.1.0 is supported; v0.2.0 security behavior is implemented but unreleased. Describe a version as supported only once its matching tag exists.
+Singleserve is a public Go library for single-binary, browser-based local applications. v0.2.x is the supported release line; v0.2.0 introduced the released security contract. Describe a specific version as supported only once its matching tag exists.
 
 ## Required context
 
@@ -50,14 +50,14 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 
 ## Planning gate
 
-The v0.2.0 security implementation is complete and specified by `docs/dev/specs/v0.2-api.md`; release preparation is governed by the changelog and release policy. Any additional material expansion must:
+The released v0.2 security contract is specified by `docs/dev/specs/v0.2-api.md`; patch preparation is governed by the changelog and release policy. Any additional material expansion must:
 
 1. review `docs/dev/specs/v0.1-api.md` and `docs/dev/decisions.md`;
 2. keep work within the accepted decisions or amend them explicitly;
 3. restate goal, acceptance criteria, scope, dependencies, risks, and deferrals; and
 4. obtain explicit scope approval.
 
-Do not add work outside the approved security scope without repeating that gate.
+Do not add unrelated work to v0.2.x maintenance without repeating that gate.
 
 ## Working rules
 
@@ -73,7 +73,7 @@ Do not add work outside the approved security scope without repeating that gate.
 
 - Default repository validation: `scripts/check.sh`
 - Networked vulnerability/static/supply-chain validation: `scripts/check-security.sh`
-- Mandatory v0.2 candidate browser evidence: `scripts/check-browser-security.sh` through repository-owned Playwright Chromium, with CI preferred and a recorded exact-commit local run accepted as fallback. Extra engines and platforms are diagnostic unless a concrete compatibility issue makes them relevant.
+- Mandatory v0.2.x candidate browser evidence: `scripts/check-browser-security.sh` through repository-owned Playwright Chromium, with CI preferred and a recorded exact-commit local run accepted as fallback. Extra engines and platforms are diagnostic unless a concrete compatibility issue makes them relevant.
 - Release-candidate policy validation: `scripts/release-check.sh`
 - Docs-only changes: `scripts/check-docs.sh` and `git diff --check`
 - Raw Go commands in managed sandboxes must use a writable cache, for example `GOCACHE="$PWD/.cache/go-build" go test ./...`.

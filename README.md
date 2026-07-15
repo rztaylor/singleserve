@@ -3,7 +3,7 @@
 Singleserve is a lightweight Go toolkit for single-binary, browser-based local applications. It provides the local process boundary—loopback HTTP hosting, per-launch authentication, browser startup, browser-presence tracking, lifetime policy, shutdown guards, and graceful drain—while applications keep ownership of their router, business logic, frontend framework, and embedded assets.
 
 > [!IMPORTANT]
-> `v0.1.0` is the current supported release. The repository also contains the implemented, unreleased v0.2.0 security contract; do not describe v0.2.0 as supported until its matching tag exists. See the [v0.1 API specification](docs/dev/specs/v0.1-api.md), [v0.2 API specification](docs/dev/specs/v0.2-api.md), [release governance](docs/dev/ops/release-governance.md), and [roadmap](docs/dev/roadmap.md).
+> `v0.2.x` is the current supported release line. `v0.2.0` introduced the hardened browser-authentication contract; use `v0.2.1` or later for Windows-compatible programmatic clients. See the [v0.2 API specification](docs/dev/specs/v0.2-api.md), [v0.1-to-v0.2 migration guide](docs/dev/guides/migration.md), [release governance](docs/dev/ops/release-governance.md), and [roadmap](docs/dev/roadmap.md).
 
 ## Intended use
 
@@ -23,7 +23,7 @@ It is not a router, asset pipeline, desktop shell, remote-access server, applica
 Add the released module to an application:
 
 ```sh
-go get github.com/rztaylor/singleserve@v0.1.0
+go get github.com/rztaylor/singleserve@v0.2.1
 ```
 
 ## Runnable example
@@ -91,9 +91,9 @@ The application can import the dependency-free browser client directly from the 
 </script>
 ```
 
-In the unreleased v0.2 source, `launch.URL()` opens a fixed Singleserve bootstrap page on a high-entropy per-launch `.localhost` origin. Its two-minute, one-time capability is carried only in the URL fragment, scrubbed before the network exchange, and replaced with a clean application URL before consumer content runs. Owner code may call `launch.NewBootstrapURL()` when it needs to replace an unconsumed or expired manual URL; consumers remain responsible for deciding whether their own interface exposes that recovery action. Reloads and new tabs use only a host-isolated, `HttpOnly`, `Secure`, `SameSite=Strict`, `__Host-` session cookie. The lifecycle client never reads or writes Web Storage and exposes no authentication capability.
+In v0.2, `launch.URL()` opens a fixed Singleserve bootstrap page on a high-entropy per-launch `.localhost` origin. Its two-minute, one-time capability is carried only in the URL fragment, scrubbed before the network exchange, and replaced with a clean application URL before consumer content runs. Owner code may call `launch.NewBootstrapURL()` when it needs to replace an unconsumed or expired manual URL; consumers remain responsible for deciding whether their own interface exposes that recovery action. Reloads and new tabs use only a host-isolated, `HttpOnly`, `Secure`, `SameSite=Strict`, `__Host-` session cookie. The lifecycle client never reads or writes Web Storage and exposes no authentication capability.
 
-> **Security notice for the supported v0.1.0 tag:** its browser client stores the launch capability in script-readable `sessionStorage` and exposes it as `session.token`. Applications whose contract forbids browser-readable credential storage should not use that released client. The unreleased v0.2.0 source removes that behavior rather than retaining a weaker compatibility mode; see the [migration guide](docs/dev/guides/migration.md).
+> **Security notice for v0.1.0:** its browser client stores the launch capability in script-readable `sessionStorage` and exposes it as `session.token`. That release is superseded by v0.2, which removes the weaker behavior rather than retaining a compatibility mode; see the [migration guide](docs/dev/guides/migration.md).
 
 Programmatic callers in v0.2 use a launch-bound client instead of parsing a browser URL:
 
@@ -101,7 +101,7 @@ Programmatic callers in v0.2 use a launch-bound client instead of parsing a brow
 response, err := launch.Client().Get(launch.BaseURL() + "api/items")
 ```
 
-The client carries an independent private credential, bypasses environment proxies, and refuses requests or redirects outside the exact launch origin.
+The client carries an independent private credential, bypasses environment proxies, refuses requests or redirects outside the exact launch origin, and dials the bound loopback listener directly so programmatic use does not depend on operating-system `.localhost` DNS behavior.
 
 ## Design boundaries
 
@@ -117,7 +117,7 @@ The client carries an independent private credential, bypasses environment proxi
 - [Architecture](docs/dev/architecture.md)
 - [v0.1 consumer requirements](docs/dev/specs/consumer-requirements.md)
 - [v0.1 API specification and acceptance criteria](docs/dev/specs/v0.1-api.md)
-- [Unreleased v0.2 security specification](docs/dev/specs/v0.2-api.md)
+- [v0.2 security specification](docs/dev/specs/v0.2-api.md)
 - [Migration strategy](docs/dev/guides/migration.md)
 - [Roadmap](docs/dev/roadmap.md)
 - [Decisions and unresolved choices](docs/dev/decisions.md)

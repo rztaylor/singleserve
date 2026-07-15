@@ -1,11 +1,11 @@
 # Contributing
 
-Singleserve v0.1.0 is the first supported release. Specification corrections, design feedback, and focused fixes are welcome; follow the documented pre-1.0 versioning policy for public compatibility changes.
+Singleserve v0.2.x is the supported release line. Specification corrections, design feedback, and focused fixes are welcome; follow the documented pre-1.0 versioning policy for public compatibility changes.
 
 ## Before changing the repository
 
 1. Read `AGENTS.md` and the relevant `.agents/facts/` files.
-2. Read `docs/dev/specs/v0.1-api.md` for the supported release and `docs/dev/specs/v0.2-api.md` for unreleased v0.2.0 behavior. Security work also requires the active roadmap item and ExecPlan.
+2. Read `docs/dev/specs/v0.2-api.md` for the supported contract and `docs/dev/specs/v0.1-api.md` when changing migration or historical compatibility behavior. Security work also requires the durable decisions and any active roadmap item or ExecPlan.
 3. Use a feature branch and keep the change focused.
 4. Update durable docs and the changelog when public behavior or policy changes.
 

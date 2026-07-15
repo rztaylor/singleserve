@@ -40,7 +40,7 @@ The launch token is retained only for the browser session through per-tab `sessi
 
 Evaluation against a real consumer demonstrated that retaining an authentication capability in either `localStorage` or `sessionStorage` is not an acceptable generic browser-security contract. The v0.1.0 cookie-name design prevents simultaneous Singleserve processes from authenticating with the wrong cookie, but a random port does not prevent a sibling loopback service on the same host from receiving that cookie.
 
-The unreleased v0.2.0 contract therefore:
+The released v0.2 contract therefore:
 
 - keeps Singleserve browser credentials out of script-readable persistence and public JavaScript state;
 - consumes and scrubs launch capability material before consumer content runs;
@@ -48,4 +48,4 @@ The unreleased v0.2.0 contract therefore:
 - validates effective Host, browser Origin, and authentication mode before consumer delegation; and
 - preserves the existing generic lifecycle client outcomes without a weaker compatibility mode.
 
-This is implemented but unreleased behavior, not the contract of the supported v0.1.0 tag. See `docs/dev/specs/v0.2-api.md`, the active roadmap item, and the ExecPlan.
+This is the supported replacement for the superseded v0.1.0 contract. See `docs/dev/specs/v0.2-api.md`, `docs/dev/decisions.md`, and the migration guide.

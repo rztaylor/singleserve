@@ -43,7 +43,13 @@ func TestProgrammaticShutdownDrainsInFlightRequestAndBypassesGuard(t *testing.T)
 		}
 		requestDone <- requestErr
 	}()
-	<-started
+	select {
+	case <-started:
+	case err := <-requestDone:
+		t.Fatalf("request failed before handler started: %v", err)
+	case <-time.After(time.Second):
+		t.Fatal("request did not reach handler")
+	}
 	shutdownDone := make(chan error, 1)
 	go func() { shutdownDone <- launch.Shutdown(context.Background()) }()
 	select {
