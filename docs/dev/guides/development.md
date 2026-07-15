@@ -2,7 +2,7 @@
 
 ## Current state
 
-`v0.1.0` is the first supported module release. Two repository-owned public-API compatibility harnesses cover browser-bound and explicit-lifetime applications. A real-browser smoke run remains conditional on a supported browser and stable harness; the first-release source records its local skip and associated risk in the release governance.
+`v0.1.0` is the current supported module release. Security-only v0.2.0 is implemented and in release preparation. Two repository-owned public-API compatibility harnesses cover browser-bound and explicit-lifetime applications.
 
 ## Prerequisites
 
@@ -19,13 +19,13 @@ Ordinary checks require no network, npm install, Docker, database, browser, or e
 ```sh
 scripts/check-docs.sh
 scripts/check.sh
-scripts/release-check.sh v0.1.0
+SINGLESERVE_BROWSER_BACKEND=playwright SINGLESERVE_BROWSER_NAME=chromium scripts/release-check.sh v0.2.0
 go run ./examples/minimal
 ```
 
 `check.sh` is the default local and CI gate. It builds and smoke-tests the minimal example, then verifies documentation, formatting, Go unit/integration and race tests, at least 80% Go statement coverage, vet, browser-client tests, and diff whitespace. `release-check.sh` validates version shape, governance files, the broad check, and a clean module package list; it never tags or publishes.
 
-The real-browser contract is intentionally separate from ordinary validation. `scripts/check.sh` is the complete required local-development gate on macOS, Linux, and Windows and needs no browser, npm install, or network. Repository-owned CI installs pinned Playwright Chromium and records candidate evidence; the runner OS is an implementation detail rather than a contributor or release-platform requirement. Trusted local Playwright/WebDriver and extra engine/platform runs are optional diagnostics for concrete compatibility investigations.
+The real-browser contract is intentionally separate from ordinary validation. `scripts/check.sh` is the complete required local-development gate on macOS, Linux, and Windows and needs no browser, npm install, or network. Repository-owned CI installs pinned Playwright Chromium and is the preferred candidate evidence; the runner OS is an implementation detail rather than a contributor or release-platform requirement. A recorded exact-commit local Playwright Chromium run is an accepted fallback. WebDriver and extra engine/platform runs are optional diagnostics for concrete compatibility investigations.
 
 In managed sandboxes use the scripts, which set writable repository-local Go caches. Generated cache content lives under `.cache/` and is ignored.
 
@@ -42,8 +42,8 @@ In managed sandboxes use the scripts, which set writable repository-local Go cac
 - Never include real launch tokens in docs, logs, test failures, or fixtures.
 - Never store browser authentication capabilities in Web Storage or expose them through public JavaScript state.
 - Do not treat a random loopback port as cookie isolation. Validate the effective Host and prove isolation from sibling loopback services.
-- Browser security behavior requires repository-owned Playwright Chromium evidence for v0.2.0; missing candidate evidence blocks release, while missing local browser automation does not block development.
+- Browser security behavior requires one exact-candidate repository-owned Playwright Chromium result for v0.2.0; CI is preferred and a recorded local run is accepted, while missing local browser automation does not block development.
 
 ## Documentation workflow
 
-Behavior changes update the applicable normative versioned spec first or in the same change. Ownership changes update architecture. Public compatibility and support changes update the changelog, decisions, and release governance. New planned work belongs in the active roadmap rather than a release history. The sole active v0.2.0 item is the security-only `security-hardening` plan; unrelated features remain deferred.
+Behavior changes update the applicable normative versioned spec first or in the same change. Ownership changes update architecture. Public compatibility and support changes update the changelog, decisions, and release governance. New planned work belongs in the active roadmap rather than a release history. No implementation plan is active during v0.2.0 release preparation; unrelated features remain deferred.

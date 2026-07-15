@@ -38,7 +38,7 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 - Prefer server-owned, short-lived bootstrap and HttpOnly cookie flows over application-JavaScript credential handling.
 - Validate the effective request host and browser origin at the Singleserve boundary. Security-sensitive requests must fail closed when their provenance is missing, malformed, or inconsistent with their authentication mode.
 - Do not retain a weaker legacy security mode merely for compatibility. Before 1.0, make the breaking change, document the migration, and release a new minor version.
-- Treat real-browser authentication, reload, multi-tab, cross-origin, and sibling-loopback isolation tests as mandatory repository-owned release evidence for security changes. The canonical Playwright Chromium contract may run on any suitable CI platform; its runner OS is not part of the support claim. Missing candidate evidence blocks release, but missing local browser automation never blocks ordinary development.
+- Treat real-browser authentication, reload, multi-tab, cross-origin, and sibling-loopback isolation tests as mandatory repository-owned release evidence for security changes. The canonical Playwright Chromium contract may run in CI or as a recorded local fallback at the exact candidate commit; CI is preferred, but its runner OS and hosted availability are not security properties. Missing or failing browser evidence blocks release, but missing local browser automation never blocks ordinary development.
 
 ## Package boundaries
 
@@ -50,7 +50,7 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 
 ## Planning gate
 
-The active v0.2.0 security work is scoped by `docs/dev/roadmap-items/security-hardening.md`, `docs/dev/plans/000-v0.2.0-security-hardening.md`, and `docs/dev/specs/v0.2-api.md`. Scope is approved and implementation is present; remaining work is candidate evidence and closure. Any additional material expansion must:
+The v0.2.0 security implementation is complete and specified by `docs/dev/specs/v0.2-api.md`; release preparation is governed by the changelog and release policy. Any additional material expansion must:
 
 1. review `docs/dev/specs/v0.1-api.md` and `docs/dev/decisions.md`;
 2. keep work within the accepted decisions or amend them explicitly;
@@ -73,7 +73,7 @@ Do not add work outside the approved security scope without repeating that gate.
 
 - Default repository validation: `scripts/check.sh`
 - Networked vulnerability/static/supply-chain validation: `scripts/check-security.sh`
-- Mandatory v0.2 candidate browser evidence: `scripts/check-browser-security.sh` through repository-owned Playwright Chromium CI. Local execution is optional; extra engines and platforms are diagnostic unless a concrete compatibility issue makes them relevant.
+- Mandatory v0.2 candidate browser evidence: `scripts/check-browser-security.sh` through repository-owned Playwright Chromium, with CI preferred and a recorded exact-commit local run accepted as fallback. Extra engines and platforms are diagnostic unless a concrete compatibility issue makes them relevant.
 - Release-candidate policy validation: `scripts/release-check.sh`
 - Docs-only changes: `scripts/check-docs.sh` and `git diff --check`
 - Raw Go commands in managed sandboxes must use a writable cache, for example `GOCACHE="$PWD/.cache/go-build" go test ./...`.

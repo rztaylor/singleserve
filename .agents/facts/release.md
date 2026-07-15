@@ -19,10 +19,12 @@
 ## Validation and publishing
 
 - Default validation: `scripts/check.sh`.
-- Release candidate: `scripts/release-check.sh <version>` plus the applicable specification and compatibility gates.
+- Release candidate: `scripts/release-check.sh <version>` plus the applicable specification gates.
 - Core auth, tab, lifetime, shutdown, race, and coverage gates cannot be skipped.
-- The historic v0.1 browser prerequisite skip remains documented; v0.2.0 candidate CI must fail closed when its canonical Playwright Chromium evidence is missing.
-- Local browser automation and extra engine/platform runs are not release prerequisites. The mandatory v0.2.0 evidence is the repository-owned Chromium contract covering authentication, URL scrubbing, reload, multi-tab behavior, and sibling-loopback isolation at the candidate commit.
+- The historic v0.1 browser prerequisite skip remains documented. v0.2.0 requires one passing repository-owned Playwright Chromium contract at the exact candidate commit; CI is preferred and a recorded local run is an accepted fallback.
+- Extra engine/platform runs are not release prerequisites. The mandatory v0.2.0 Chromium evidence covers authentication, URL scrubbing, reload, multi-tab behavior, and sibling-loopback isolation.
+- CodeQL remains hosted defense-in-depth. Any actionable result blocks release; unavailable hosted analysis alone does not block when the candidate's required browser, test, vulnerability, static, supply-chain, and secret checks pass.
+- Consumer migration is post-tag validation. Repository-owned compatibility harnesses guard the public API before release; a gap first demonstrated by SQLRise or another consumer is corrected in a subsequent patch release.
 - A manual, read-only hosted workflow can validate a release candidate but cannot tag or publish. No hosted publication workflow exists; tag, push, and GitHub Release creation require explicit permission.
 - Module releases produce no project-owned artifact beyond source at the tag.
 - Published tags are immutable; recover with a new version.

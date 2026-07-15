@@ -94,7 +94,7 @@ The implemented v0.2 source retains the single-local-user product boundary but d
 
 The v0.1.0 client persists the launch capability in script-readable `sessionStorage`, returns it as `session.token`, and relies on application JavaScript to scrub the launch URL. Its session cookie is launch-unique by name but host-scoped, so another service on a different port of the same loopback host can receive it. These are limitations of the released v0.1.0 design, not properties to preserve.
 
-The unreleased v0.2.0 source implements the replacement contract. A high-entropy hostname protects the cookie from ordinary sibling origins; knowledge of that hostname is capability-adjacent. `HttpOnly` prevents credential reads but does not stop trusted same-origin consumer code from issuing authenticated requests. Real-browser and security-analysis evidence remain release-blocking until the v0.2.0 candidate is validated and tagged.
+The unreleased v0.2.0 source implements the replacement contract. A high-entropy hostname protects the cookie from ordinary sibling origins; knowledge of that hostname is capability-adjacent. `HttpOnly` prevents credential reads but does not stop trusted same-origin consumer code from issuing authenticated requests. Mandatory real-browser, test, vulnerability, static, supply-chain, and secret evidence remain release-blocking until the v0.2.0 candidate is validated and tagged; hosted CodeQL availability is defense-in-depth rather than a release property.
 
 ## Failure boundaries
 

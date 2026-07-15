@@ -85,7 +85,13 @@ The implementation greenlight accepted the following choices. They are now part 
 
 - **Decision:** run the repository-owned Go browser-security contract through pinned Playwright Chromium in CI. The CI runner OS is an implementation detail, not part of the release requirement or product support claim. Retain direct WebDriver and other Playwright engines only as optional diagnostic paths.
 - **Why:** cookie acceptance, `.localhost` handling, navigation, referrer, storage, and tab lifecycle are exercised by the real browser contract. One maintained browser path gives repeatable evidence without imposing a browser/OS cross-product or requiring maintainers to weaken workstation controls.
-- **Boundary:** Playwright is a test-only development dependency used by the networked candidate gate. `scripts/check.sh` is the complete local-development gate and requires no npm install, browser, network, or particular operating system. Additional engines or platforms become required only when a concrete compatibility finding or an explicit support claim demonstrates the need.
+- **Boundary:** Playwright is a test-only development dependency used by the networked candidate gate. `scripts/check.sh` is the complete local-development gate and requires no npm install, browser, network, or particular operating system. One passing Playwright Chromium run at the exact candidate commit is mandatory; CI is preferred, while a recorded local run is an accepted fallback. Additional engines or platforms become required only when a concrete compatibility finding or an explicit support claim demonstrates the need.
+
+### Proportionate security release evidence
+
+- **Decision:** keep deterministic tests, race coverage, vulnerability scanning, repository static checks, secret/supply-chain checks, and one exact-candidate Chromium contract as hard v0.2.0 gates. Keep CodeQL as defense-in-depth: an actionable finding blocks release, but hosted-analysis availability alone does not. Validate repository-owned public compatibility before tagging; migrate external consumers after a compatible tag exists and fix newly demonstrated gaps in a patch release.
+- **Why:** the browser contract exercises security behavior that mocks cannot prove, while a hosted runner is only one way to execute it. CodeQL usefully adds an independent analyzer but should not turn third-party infrastructure availability into a release property. Requiring an external consumer to migrate before the compatible tag it depends on creates a circular gate rather than stronger evidence.
+- **Boundary:** release validation still fails closed for missing or failing real-browser evidence, relevant security findings, vulnerability results, tests, race coverage, static repository checks, secrets, or an unclean candidate. This decision does not weaken the v0.2 threat model or permit known defects to ship.
 
 ### Security takes precedence over pre-1.0 compatibility
 

@@ -9,7 +9,7 @@ The checked-in workflow at `.github/workflows/ci.yml` uses read-only permissions
 - A platform matrix runs `go test ./...` on Ubuntu, macOS, and Windows so platform opener files compile and platform-specific tests execute.
 - Go is selected from `go.mod`. Dependency caching stays disabled while the standard-library-only module has no `go.sum`; enable it only if a real dependency creates one.
 - No secrets or write permissions are required.
-- A dedicated hosted job installs the pinned Playwright development dependency and runs the mandatory real-browser security contract on Chromium. Its current runner OS is an implementation detail and may change without altering support policy.
+- A dedicated hosted job installs the pinned Playwright development dependency and runs the mandatory real-browser security contract on Chromium. Its current runner OS is an implementation detail and may change without altering support policy; a recorded exact-commit local Playwright Chromium run is the fallback when hosted execution is unavailable.
 - A manual workflow dispatch with a version runs the complete release-candidate policy through the same hosted Chromium contract. It validates only and never tags or publishes.
 
 ## Deferred CI
@@ -26,7 +26,7 @@ The v0.2.0 security plan promotes the following checks from optional follow-up t
 - CodeQL or a documented equivalent static security analysis with minimal workflow permissions; and
 - third-party GitHub Actions pinned to reviewed immutable commit SHAs, with Dependabot updates preserving reviewable version context.
 
-The repository implements these checks in `scripts/check-browser-security.sh`, `scripts/check-security.sh`, `.github/workflows/ci.yml`, and `.github/workflows/security.yml`. The Go browser contract has no third-party Go dependency; hosted browser execution uses the exact Playwright version in `client/package-lock.json`, with weekly Dependabot review. The browser job is repository-owned candidate evidence, not a local contributor prerequisite, and no browser/OS cross-product is required without a concrete compatibility reason. `govulncheck` is pinned to v1.6.0 and reports its database timestamp. CodeQL uses only `security-events: write` in its analysis job. Every third-party action reference is an immutable reviewed commit SHA with its human-readable major version in a comment. Missing or failing candidate infrastructure still blocks v0.2.0.
+The repository implements these checks in `scripts/check-browser-security.sh`, `scripts/check-security.sh`, `.github/workflows/ci.yml`, and `.github/workflows/security.yml`. The Go browser contract has no third-party Go dependency; hosted browser execution uses the exact Playwright version in `client/package-lock.json`, with weekly Dependabot review. The browser job is the preferred repository-owned candidate evidence, not a local contributor prerequisite, and no browser/OS cross-product is required without a concrete compatibility reason. `govulncheck` is pinned to v1.6.0 and reports its database timestamp. CodeQL uses only `security-events: write` in its analysis job. Every third-party action reference is an immutable reviewed commit SHA with its human-readable major version in a comment. Mandatory candidate evidence and actionable findings block release; hosted CodeQL availability by itself does not.
 
 ## Dependabot
 

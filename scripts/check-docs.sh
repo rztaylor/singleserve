@@ -28,8 +28,6 @@ SECURITY.md
 docs/dev/architecture.md
 docs/dev/decisions.md
 docs/dev/roadmap.md
-docs/dev/roadmap-items/security-hardening.md
-docs/dev/plans/000-v0.2.0-security-hardening.md
 docs/dev/specs/consumer-requirements.md
 docs/dev/specs/v0.1-api.md
 docs/dev/specs/v0.2-api.md
@@ -67,8 +65,7 @@ grep -q 'module github.com/rztaylor/singleserve' go.mod
 grep -q 'Status: \*\*Released in v0.1.0\*\*' docs/dev/specs/v0.1-api.md
 grep -q 'Status: \*\*Implemented; unreleased\*\*' docs/dev/specs/v0.2-api.md
 grep -q 'Launch.NewBootstrapURL()' docs/dev/specs/v0.2-api.md
-grep -q '^### security-hardening$' docs/dev/roadmap.md
-grep -q '^Status: In progress\.' docs/dev/plans/000-v0.2.0-security-hardening.md
+grep -q '^No active items\.' docs/dev/roadmap.md
 grep -q 'MIT License' LICENSE
 
 if grep -rEn '/Users/|/home/|C:\\Users\\' -- AGENTS.md README.md CONTRIBUTING.md SECURITY.md CHANGELOG.md .agents/facts docs; then

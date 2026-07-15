@@ -23,4 +23,4 @@
 ## Decision state
 
 - The v0.1 API/auth/client/timing choices in `docs/dev/decisions.md` are greenlit and implemented; changing them requires a spec and decision update.
-- v0.2.0 is an implemented, unreleased security-only minor release. Its remaining candidate evidence and closure live in `security-hardening`; no unrelated feature may enter it.
+- v0.2.0 is an implemented, unreleased security-only minor release in final release preparation. Its scope is closed; no unrelated feature may enter it.
