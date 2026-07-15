@@ -44,4 +44,4 @@ case "${SINGLESERVE_BROWSER_BACKEND:-webdriver}" in
         ;;
 esac
 
-go test -tags=browsersecurity -run '^TestRealBrowserSecurity$' ./
+go test -count=1 -tags=browsersecurity -run '^TestRealBrowserSecurity$' ./
