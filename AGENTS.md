@@ -1,6 +1,6 @@
 # Repository Instructions
 
-Singleserve is a public Go library for single-binary, browser-based local applications. The v0.1.0 release source is reviewed; describe a version as supported only once its matching tag exists.
+Singleserve is a public Go library for single-binary, browser-based local applications. v0.1.0 is supported; v0.2.0 security behavior is implemented but unreleased. Describe a version as supported only once its matching tag exists.
 
 ## Required context
 
@@ -11,6 +11,7 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 - Engineering: `.agents/facts/engineering.md`
 - Go: `.agents/facts/go.md`
 - Testing: `.agents/facts/testing.md`
+- Security: `.agents/facts/security.md`
 - Technical debt: `.agents/facts/find-tech-debt.md`
 - Documentation: `.agents/facts/docs.md`
 - Roadmap and planning: `.agents/facts/roadmap.md`
@@ -19,14 +20,25 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 
 ## Product boundaries
 
-- Keep the server strictly loopback-only in v0.1. Do not add an opt-out.
+- Security is a release requirement, not an optional mode or compatibility tradeoff. A known credential, origin, isolation, or lifecycle vulnerability blocks release.
+- Keep the server strictly loopback-only. Do not add an opt-out.
 - Generate authentication material per process launch and never persist or log it accidentally.
 - Keep lifetime policy independent from browser-opening policy.
 - Preserve application ownership of its `http.Handler`, routes, domain logic, frontend framework, and assets.
 - Keep the browser client framework-neutral and dependency-free.
 - Do not import consumer application packages or let a consumer dictate package architecture.
 - Add requirements only when they are demonstrated as generic to Singleserve's lifecycle boundary.
-- Reject remote access, TLS termination, account identity, desktop webviews, frontend tooling, and application persistence from v0.1 unless the product direction is explicitly changed.
+- Reject remote access, TLS termination, account identity, desktop webviews, frontend tooling, and application persistence unless the product direction is explicitly changed.
+
+## Security invariants
+
+- Treat remote web pages, sibling loopback services, and untrusted local processes as outside the trust boundary; do not rely on a random port as an origin, cookie, or credential-isolation boundary.
+- Never write authentication capabilities to `localStorage`, `sessionStorage`, IndexedDB, caches, or other script-readable browser persistence.
+- Keep browser authentication material out of public JavaScript return values and application-owned handlers, middleware, logs, errors, caches, referrers, and clean navigation history.
+- Prefer server-owned, short-lived bootstrap and HttpOnly cookie flows over application-JavaScript credential handling.
+- Validate the effective request host and browser origin at the Singleserve boundary. Security-sensitive requests must fail closed when their provenance is missing, malformed, or inconsistent with their authentication mode.
+- Do not retain a weaker legacy security mode merely for compatibility. Before 1.0, make the breaking change, document the migration, and release a new minor version.
+- Treat real-browser authentication, reload, multi-tab, cross-origin, and sibling-loopback isolation tests as mandatory repository-owned release evidence for security changes. The canonical Playwright Chromium contract may run on any suitable CI platform; its runner OS is not part of the support claim. Missing candidate evidence blocks release, but missing local browser automation never blocks ordinary development.
 
 ## Package boundaries
 
@@ -38,14 +50,14 @@ Read the relevant repo-local facts before changing code, docs, scripts, roadmap,
 
 ## Planning gate
 
-There is no active implementation plan at the v0.1.0 release source. For materially expanded implementation:
+The active v0.2.0 security work is scoped by `docs/dev/roadmap-items/security-hardening.md`, `docs/dev/plans/000-v0.2.0-security-hardening.md`, and `docs/dev/specs/v0.2-api.md`. Scope is approved and implementation is present; remaining work is candidate evidence and closure. Any additional material expansion must:
 
 1. review `docs/dev/specs/v0.1-api.md` and `docs/dev/decisions.md`;
 2. keep work within the accepted decisions or amend them explicitly;
 3. restate goal, acceptance criteria, scope, dependencies, risks, and deferrals; and
 4. obtain explicit scope approval.
 
-Do not add post-v0.1 scope before that gate.
+Do not add work outside the approved security scope without repeating that gate.
 
 ## Working rules
 
@@ -60,6 +72,8 @@ Do not add post-v0.1 scope before that gate.
 ## Validation
 
 - Default repository validation: `scripts/check.sh`
+- Networked vulnerability/static/supply-chain validation: `scripts/check-security.sh`
+- Mandatory v0.2 candidate browser evidence: `scripts/check-browser-security.sh` through repository-owned Playwright Chromium CI. Local execution is optional; extra engines and platforms are diagnostic unless a concrete compatibility issue makes them relevant.
 - Release-candidate policy validation: `scripts/release-check.sh`
 - Docs-only changes: `scripts/check-docs.sh` and `git diff --check`
 - Raw Go commands in managed sandboxes must use a writable cache, for example `GOCACHE="$PWD/.cache/go-build" go test ./...`.

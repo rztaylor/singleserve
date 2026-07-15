@@ -38,12 +38,20 @@ func TestExplicitConsumerHarness(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	initialURL := launch.URL()
+	renewedURL, err := launch.NewBootstrapURL()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if renewedURL == initialURL || launch.URL() != renewedURL {
+		t.Fatal("owner-controlled bootstrap renewal did not rotate the current URL")
+	}
 	if err := launch.OpenBrowser(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 
 	client := browserClient(t)
-	baseURL, token := bootstrapConsumer(t, client, launch.URL())
+	baseURL := bootstrapConsumer(t, client, renewedURL)
 	response, err := client.Get(baseURL + "/api/status")
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +61,7 @@ func TestExplicitConsumerHarness(t *testing.T) {
 		t.Fatalf("application route status = %d", response.StatusCode)
 	}
 
-	response = controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/shutdown", token, tabID(2))
+	response = controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/shutdown", tabID(2))
 	response.Body.Close()
 	if response.StatusCode != http.StatusConflict {
 		t.Fatalf("browser shutdown status = %d", response.StatusCode)

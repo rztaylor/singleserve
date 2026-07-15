@@ -56,7 +56,7 @@ func run(ctx context.Context, stdout, stderr io.Writer, opener singleserve.Brows
 		return err
 	}
 
-	fmt.Fprintln(stdout, "Singleserve minimal is running at", launch.BaseURL())
+	fmt.Fprintln(stdout, "Singleserve minimal is running on loopback", launch.Address())
 	if err := launch.OpenBrowser(ctx); err != nil {
 		fmt.Fprintln(stderr, "Could not open a browser:", err)
 		fmt.Fprintln(stderr, "Open this URL manually:", launch.URL())

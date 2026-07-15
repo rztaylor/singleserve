@@ -8,13 +8,13 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/rztaylor/singleserve"
+	"github.com/rztaylor/singleserve/internal/testbrowserjar"
 )
 
 const smokeTimeout = 5 * time.Second
@@ -39,18 +39,32 @@ func TestSmoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	token := parsed.Query().Get("singleserve_token")
+	token := parsed.Fragment
 	if token == "" {
-		t.Fatal("browser opener received no launch token")
+		t.Fatal("browser opener received no bootstrap capability")
 	}
 	baseURL := (&url.URL{Scheme: parsed.Scheme, Host: parsed.Host, Path: "/"}).String()
 
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client := &http.Client{Jar: jar, Timeout: smokeTimeout}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	client := &http.Client{Jar: testbrowserjar.New(), Timeout: smokeTimeout, Transport: transport}
 	response := request(t, client, http.MethodGet, launchURL, nil)
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("bootstrap page status = %d", response.StatusCode)
+	}
+	bootstrapPage := readBody(t, response)
+	if !strings.Contains(bootstrapPage, `src="/_singleserve/bootstrap.js"`) || strings.Contains(bootstrapPage, token) {
+		t.Fatal("bootstrap page did not keep the capability out of its response")
+	}
+	response = request(t, client, http.MethodPost, baseURL+"_singleserve/bootstrap", http.Header{
+		"X-Singleserve-Bootstrap": []string{token},
+		"Origin":                  []string{strings.TrimSuffix(baseURL, "/")},
+	})
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("bootstrap exchange status = %d", response.StatusCode)
+	}
+	response.Body.Close()
+	response = request(t, client, http.MethodGet, baseURL, nil)
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("frontend status = %d", response.StatusCode)
 	}
@@ -109,9 +123,8 @@ func TestSmoke(t *testing.T) {
 	}
 
 	headers := http.Header{
-		singleserve.TokenHeader: []string{token},
-		singleserve.TabHeader:   []string{base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{1}, 16))},
-		"Origin":                []string{strings.TrimSuffix(baseURL, "/")},
+		singleserve.TabHeader: []string{base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{1}, 16))},
+		"Origin":              []string{strings.TrimSuffix(baseURL, "/")},
 	}
 	response = request(t, client, http.MethodPost, baseURL+"_singleserve/tabs/heartbeat", headers)
 	if response.StatusCode != http.StatusOK {
@@ -136,7 +149,7 @@ func TestSmoke(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q", stderr.String())
 	}
-	if output := stdout.String(); !strings.Contains(output, "Singleserve minimal is running at "+baseURL) || !strings.Contains(output, "Singleserve minimal stopped: browser_request") || strings.Contains(output, token) {
+	if output := stdout.String(); !strings.Contains(output, "Singleserve minimal is running on loopback 127.0.0.1:"+parsed.Port()) || !strings.Contains(output, "Singleserve minimal stopped: browser_request") || strings.Contains(output, parsed.Hostname()) || strings.Contains(output, token) {
 		t.Fatalf("stdout = %q", output)
 	}
 }
@@ -161,7 +174,7 @@ func TestBrowserLaunchFailureShowsManualURL(t *testing.T) {
 	if parseErr != nil {
 		t.Fatal(parseErr)
 	}
-	if strings.Contains(stdout.String(), parsed.Query().Get("singleserve_token")) {
+	if strings.Contains(stdout.String(), parsed.Fragment) {
 		t.Fatalf("stdout exposed launch token: %q", stdout.String())
 	}
 }

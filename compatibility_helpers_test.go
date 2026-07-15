@@ -3,34 +3,32 @@ package singleserve_test
 import (
 	"encoding/base64"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"testing"
 	"time"
 
 	"github.com/rztaylor/singleserve"
+	"github.com/rztaylor/singleserve/internal/testbrowserjar"
 )
 
 const consumerHarnessTimeout = time.Second
 
 func browserClient(t *testing.T) *http.Client {
 	t.Helper()
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &http.Client{Jar: jar, Timeout: consumerHarnessTimeout}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	return &http.Client{Jar: testbrowserjar.New(), Timeout: consumerHarnessTimeout, Transport: transport}
 }
 
-func bootstrapConsumer(t *testing.T, client *http.Client, launchURL string) (baseURL, token string) {
+func bootstrapConsumer(t *testing.T, client *http.Client, launchURL string) (baseURL string) {
 	t.Helper()
 	parsed, err := url.Parse(launchURL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	token = parsed.Query().Get("singleserve_token")
+	token := parsed.Fragment
 	if token == "" {
-		t.Fatal("launch URL did not include an authentication token")
+		t.Fatal("launch URL did not include a bootstrap capability")
 	}
 	response, err := client.Get(launchURL)
 	if err != nil {
@@ -40,9 +38,23 @@ func bootstrapConsumer(t *testing.T, client *http.Client, launchURL string) (bas
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("bootstrap status = %d", response.StatusCode)
 	}
-	parsed.RawQuery = ""
+	parsed.Fragment = ""
 	baseURL = (&url.URL{Scheme: parsed.Scheme, Host: parsed.Host}).String()
-	return baseURL, token
+	request, err := http.NewRequest(http.MethodPost, baseURL+"/_singleserve/bootstrap", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("X-Singleserve-Bootstrap", token)
+	request.Header.Set("Origin", baseURL)
+	response, err = client.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("bootstrap exchange status = %d", response.StatusCode)
+	}
+	return baseURL
 }
 
 func tabID(seed byte) string {
@@ -52,13 +64,12 @@ func tabID(seed byte) string {
 	})
 }
 
-func controlRequest(t *testing.T, client *http.Client, method, rawURL, token, tab string) *http.Response {
+func controlRequest(t *testing.T, client *http.Client, method, rawURL, tab string) *http.Response {
 	t.Helper()
 	request, err := http.NewRequest(method, rawURL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	request.Header.Set(singleserve.TokenHeader, token)
 	request.Header.Set(singleserve.TabHeader, tab)
 	parsed, err := url.Parse(rawURL)
 	if err != nil {

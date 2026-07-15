@@ -6,6 +6,9 @@
     "node": ">=24"
   },
   "scripts": {
-    "test": "node --test singleserve.test.mjs"
+    "test": "node --check playwright-driver.mjs && node --test *.test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1"
   }
 }

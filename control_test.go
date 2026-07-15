@@ -1,12 +1,17 @@
 package singleserve
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestControlTabsAndGuardedShutdown(t *testing.T) {
@@ -28,11 +33,11 @@ func TestControlTabsAndGuardedShutdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
-	token := tokenFromLaunchURL(t, launch.URL())
 	tabID := testTabID(7)
-	headers := http.Header{TokenHeader: []string{token}, TabHeader: []string{tabID}}
+	headers := http.Header{TabHeader: []string{tabID}}
+	client := launch.Client()
 
-	heartbeat := mustRequest(t, http.DefaultClient, http.MethodPost, launch.BaseURL()+"_singleserve/tabs/heartbeat", headers)
+	heartbeat := mustRequest(t, client, http.MethodPost, launch.BaseURL()+"_singleserve/tabs/heartbeat", headers)
 	if heartbeat.StatusCode != http.StatusOK {
 		t.Fatalf("heartbeat status = %d", heartbeat.StatusCode)
 	}
@@ -41,7 +46,7 @@ func TestControlTabsAndGuardedShutdown(t *testing.T) {
 		t.Fatalf("tabs after heartbeat = %#v", tabs)
 	}
 
-	shutdown := mustRequest(t, http.DefaultClient, http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", headers)
+	shutdown := mustRequest(t, client, http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", headers)
 	if shutdown.StatusCode != http.StatusConflict {
 		t.Fatalf("guarded shutdown status = %d, want 409", shutdown.StatusCode)
 	}
@@ -57,7 +62,7 @@ func TestControlTabsAndGuardedShutdown(t *testing.T) {
 		t.Fatalf("guard request = %#v", request)
 	}
 
-	disconnect := mustRequest(t, http.DefaultClient, http.MethodPost, launch.BaseURL()+"_singleserve/tabs/disconnect", headers)
+	disconnect := mustRequest(t, client, http.MethodPost, launch.BaseURL()+"_singleserve/tabs/disconnect", headers)
 	closeBody(t, disconnect)
 	if tabs := server.Tabs(); len(tabs) != 1 || tabs[0].State != TabDisconnected {
 		t.Fatalf("tabs after disconnect = %#v", tabs)
@@ -73,8 +78,7 @@ func TestBrowserShutdownCompletesWithReason(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	headers := http.Header{TokenHeader: []string{tokenFromLaunchURL(t, launch.URL())}}
-	response := mustRequest(t, http.DefaultClient, http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", headers)
+	response := mustRequest(t, launch.Client(), http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", nil)
 	if response.StatusCode != http.StatusAccepted {
 		t.Fatalf("shutdown status = %d", response.StatusCode)
 	}
@@ -101,13 +105,89 @@ func TestUnexpectedGuardFailureIsGeneric(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
-	headers := http.Header{TokenHeader: []string{tokenFromLaunchURL(t, launch.URL())}}
-	response := mustRequest(t, http.DefaultClient, http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", headers)
+	response := mustRequest(t, launch.Client(), http.MethodPost, launch.BaseURL()+"_singleserve/shutdown", nil)
 	if response.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("guard failure status = %d", response.StatusCode)
 	}
 	body := readBody(t, response)
 	if !strings.Contains(body, `"code":"shutdown_guard_failed"`) || strings.Contains(body, "private detail") {
 		t.Fatalf("guard failure body = %s", body)
+	}
+}
+
+func TestControlEndpointsRejectEveryRequestBodyForm(t *testing.T) {
+	server, err := New(Options{Handler: http.NotFoundHandler()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := server.Start(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
+
+	tests := []struct {
+		name      string
+		body      io.Reader
+		configure func(*http.Request)
+	}{
+		{name: "known length", body: strings.NewReader("payload")},
+		{name: "chunked", body: strings.NewReader("payload"), configure: func(request *http.Request) {
+			request.ContentLength = -1
+			request.TransferEncoding = []string{"chunked"}
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request, requestErr := http.NewRequest(http.MethodGet, launch.BaseURL()+"_singleserve/health", test.body)
+			if requestErr != nil {
+				t.Fatal(requestErr)
+			}
+			if test.configure != nil {
+				test.configure(request)
+			}
+			response, requestErr := launch.Client().Do(request)
+			if requestErr != nil {
+				t.Fatal(requestErr)
+			}
+			if response.StatusCode != http.StatusRequestEntityTooLarge {
+				t.Fatalf("status = %d", response.StatusCode)
+			}
+			closeBody(t, response)
+		})
+	}
+}
+
+func TestControlBodyRejectionDoesNotDrainSlowClient(t *testing.T) {
+	server, err := New(Options{Handler: http.NotFoundHandler()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := server.Start(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
+
+	connection, err := net.DialTimeout("tcp", launch.Address(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer connection.Close()
+	if err := connection.SetDeadline(time.Now().Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	host := strings.TrimSuffix(strings.TrimPrefix(launch.BaseURL(), "http://"), "/")
+	request := fmt.Sprintf("POST /_singleserve/health HTTP/1.1\r\nHost: %s\r\n%s: %s\r\nContent-Length: 10\r\n\r\n", host, TokenHeader, server.programToken)
+	if _, err := io.WriteString(connection, request); err != nil {
+		t.Fatal(err)
+	}
+	response, err := http.ReadResponse(bufio.NewReader(connection), &http.Request{Method: http.MethodPost})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusRequestEntityTooLarge || !response.Close {
+		t.Fatalf("slow-body response = %d, close = %v", response.StatusCode, response.Close)
 	}
 }

@@ -107,6 +107,34 @@ func TestBrowserBoundFirstContactTimeout(t *testing.T) {
 	}
 }
 
+func TestBootstrapRenewalDoesNotResetFirstContactTimeout(t *testing.T) {
+	now := time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC)
+	clock := newManualClock(now)
+	server, err := newServer(Options{
+		Handler: http.NotFoundHandler(),
+		Lifetime: LifetimePolicy{
+			Mode:                LifetimeBrowserBound,
+			FirstContactTimeout: 10 * time.Second,
+			HeartbeatTimeout:    5 * time.Second,
+			DisconnectGrace:     2 * time.Second,
+			CheckInterval:       time.Second,
+		},
+	}, clock, nil, strings.NewReader(strings.Repeat("t", 144)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch := startWithTicker(t, server, clock)
+	clock.advance(now.Add(5 * time.Second))
+	if _, err := launch.NewBootstrapURL(); err != nil {
+		t.Fatal(err)
+	}
+	clock.advance(now.Add(10 * time.Second))
+	result := waitForResult(t, launch)
+	if result.Reason != ShutdownFirstContactTimeout {
+		t.Fatalf("reason = %q", result.Reason)
+	}
+}
+
 func TestBrowserBoundExpiresIndependentTabsThenStops(t *testing.T) {
 	now := time.Date(2026, 7, 14, 12, 0, 0, 0, time.UTC)
 	clock := newManualClock(now)
@@ -256,7 +284,7 @@ func newTestServerWithClock(t *testing.T, clock clock, lifetime LifetimePolicy, 
 		Handler:  http.NotFoundHandler(),
 		Lifetime: lifetime,
 		Guard:    guard,
-	}, clock, nil, strings.NewReader(strings.Repeat("t", 32)))
+	}, clock, nil, strings.NewReader(strings.Repeat("t", 112)))
 	if err != nil {
 		t.Fatal(err)
 	}

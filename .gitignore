@@ -1,4 +1,5 @@
 .cache/
 .agents/skills
+client/node_modules/
 coverage.out
 dist/

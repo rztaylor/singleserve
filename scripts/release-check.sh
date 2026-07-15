@@ -31,6 +31,13 @@ fi
 
 scripts/check.sh
 
+case "$version" in
+    v0.2.*)
+        scripts/check-security.sh
+        scripts/check-browser-security.sh
+        ;;
+esac
+
 changelog_version=${version#v}
 if ! grep -Fq "## [$changelog_version]" CHANGELOG.md; then
     echo "CHANGELOG.md has no release heading for $version" >&2

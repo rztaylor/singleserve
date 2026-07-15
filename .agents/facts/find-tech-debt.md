@@ -6,3 +6,4 @@
 - Use package files and routine names in durable entries, not line numbers.
 - Real-browser smoke and consumer validation are declared product validation gates, not technical debt.
 - No unresolved technical-debt item is registered for the v0.1.0 release source.
+- Confirmed security gaps are not deferred as ordinary debt. The v0.1 browser-token persistence, client token exposure, application-JavaScript URL scrubbing, and cookie port-isolation concerns are release-blocking scope in `security-hardening` for v0.2.0.
