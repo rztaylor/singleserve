@@ -1,8 +1,5 @@
-export const TOKEN_HEADER = "X-Singleserve-Token";
 export const TAB_HEADER = "X-Singleserve-Tab";
 export const CONTROL_PATH = "/_singleserve/";
-export const TOKEN_QUERY = "singleserve_token";
-export const TOKEN_STORAGE_KEY = "singleserve.launchToken";
 
 export const DEFAULT_HEARTBEAT_INTERVAL_MS = 5_000;
 export const DEFAULT_HEARTBEAT_TIMEOUT_MS = 2_000;
@@ -33,7 +30,6 @@ export async function connect(options = {}) {
   const failureThreshold = positiveNumber(options.failureThreshold, DEFAULT_FAILURE_THRESHOLD);
   const onServerUnavailable = typeof options.onServerUnavailable === "function" ? options.onServerUnavailable : () => {};
   const onHeartbeat = typeof options.onHeartbeat === "function" ? options.onHeartbeat : () => {};
-  const token = initializeToken(browser);
   const tabID = createTabID();
   const origin = new URL(browser.location.href).origin;
 
@@ -54,9 +50,9 @@ export async function connect(options = {}) {
     assertSameOrigin(input, origin);
     const inputHeaders = typeof Request !== "undefined" && input instanceof Request ? input.headers : undefined;
     const headers = new Headers(init.headers ?? inputHeaders);
-    if (token) headers.set(TOKEN_HEADER, token);
+    headers.delete("X-Singleserve-Token");
     headers.set(TAB_HEADER, tabID);
-    return fetchImpl(input, { ...init, headers, credentials: init.credentials ?? "same-origin" });
+    return fetchImpl(input, { ...init, headers, credentials: "same-origin" });
   };
 
   const health = async (signal) => {
@@ -144,7 +140,6 @@ export async function connect(options = {}) {
   await tick();
 
   return {
-    token,
     tabID,
     fetch: authenticatedFetch,
     health,
@@ -166,28 +161,6 @@ export async function connect(options = {}) {
       browser.removeEventListener?.("pageshow", handlePageShow);
     },
   };
-}
-
-function initializeToken(browser) {
-  const current = new URL(browser.location.href);
-  const fromURL = current.searchParams.get(TOKEN_QUERY) || "";
-  const storage = safeSessionStorage(browser);
-  if (fromURL) {
-    storage?.setItem(TOKEN_STORAGE_KEY, fromURL);
-    current.searchParams.delete(TOKEN_QUERY);
-    const clean = `${current.pathname}${current.search}${current.hash}` || "/";
-    browser.history.replaceState(browser.history.state, "", clean);
-    return fromURL;
-  }
-  return storage?.getItem(TOKEN_STORAGE_KEY) || "";
-}
-
-function safeSessionStorage(browser) {
-  try {
-    return browser.sessionStorage ?? null;
-  } catch {
-    return null;
-  }
 }
 
 function createTabID() {

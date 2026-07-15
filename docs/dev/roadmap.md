@@ -1,9 +1,11 @@
 # Roadmap
 
-`v0.1.0` is the reviewed first-release source. There are no active roadmap items.
+`v0.1.0` is the current supported release. Security-only v0.2.0 is implemented and in release preparation; its completed outcomes live in durable specifications, decisions, architecture, migration, changelog, and release-governance documentation.
 
-Future work must be added here with a stable kebab-case ID, an explicit status, a dependency-aware execution order, and a linked brief when its scope warrants one.
+## Active items
+
+No active items. Candidate validation and explicit release authorization are operational release work, not unfinished product scope.
 
 ## Deferred direction
 
-Do not schedule npm packaging, remote access, control-path customization, event observers, TLS, or WebSockets until a demonstrated Singleserve requirement justifies them. Durable rationale lives in `docs/dev/decisions.md`.
+Do not schedule npm packaging, remote access, control-path customization, event observers, TLS termination, WebSockets, or unrelated lifecycle features during v0.2.0. Durable rationale lives in `docs/dev/decisions.md`.

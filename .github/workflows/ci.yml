@@ -5,6 +5,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Optional release candidate version to validate (for example, v0.2.0-rc.1)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -18,14 +24,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: go.mod
           cache: false
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: "24"
       - name: Build, smoke-test, and validate repository
@@ -43,11 +49,69 @@ jobs:
           - windows-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
       - name: Set up Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version-file: go.mod
           cache: false
       - name: Test packages
         run: go test ./...
+
+  browser-security:
+    name: Real-browser security
+    runs-on: macos-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install Playwright test dependency
+        run: npm ci --prefix client --ignore-scripts
+      - name: Install browser engine
+        working-directory: client
+        run: ./node_modules/.bin/playwright install chromium
+      - name: Run real-browser security contract
+        env:
+          SINGLESERVE_BROWSER_BACKEND: playwright
+          SINGLESERVE_BROWSER_NAME: chromium
+        run: scripts/check-browser-security.sh
+
+  release-candidate:
+    name: Release candidate validation
+    if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+    runs-on: macos-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Install Playwright test dependency
+        run: npm ci --prefix client --ignore-scripts
+      - name: Install Chromium
+        working-directory: client
+        run: ./node_modules/.bin/playwright install chromium
+      - name: Run release candidate policy
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          SINGLESERVE_BROWSER_BACKEND: playwright
+          SINGLESERVE_BROWSER_NAME: chromium
+        run: scripts/release-check.sh "$RELEASE_VERSION"

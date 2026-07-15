@@ -1,9 +1,11 @@
 package singleserve
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -35,7 +37,7 @@ func TestProgrammaticShutdownDrainsInFlightRequestAndBypassesGuard(t *testing.T)
 	}
 	requestDone := make(chan error, 1)
 	go func() {
-		response, requestErr := http.DefaultClient.Get(launch.URL())
+		response, requestErr := launch.Client().Get(launch.BaseURL())
 		if requestErr == nil {
 			requestErr = response.Body.Close()
 		}
@@ -65,6 +67,28 @@ func TestProgrammaticShutdownDrainsInFlightRequestAndBypassesGuard(t *testing.T)
 	}
 }
 
+func TestNewBootstrapURLRequiresRunningLaunch(t *testing.T) {
+	var nilLaunch *Launch
+	if _, err := nilLaunch.NewBootstrapURL(); err == nil || !strings.Contains(err.Error(), "nil launch") {
+		t.Fatalf("nil launch renewal error = %v", err)
+	}
+
+	server, err := New(Options{Handler: http.NotFoundHandler()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := server.Start(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := launch.Shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := launch.NewBootstrapURL(); err == nil || !strings.Contains(err.Error(), "not running") {
+		t.Fatalf("stopped launch renewal error = %v", err)
+	}
+}
+
 func TestDrainTimeoutIsReturned(t *testing.T) {
 	started := make(chan struct{})
 	blocked := make(chan struct{})
@@ -82,7 +106,7 @@ func TestDrainTimeoutIsReturned(t *testing.T) {
 	}
 	requestDone := make(chan struct{})
 	go func() {
-		response, requestErr := http.DefaultClient.Get(launch.URL())
+		response, requestErr := launch.Client().Get(launch.BaseURL())
 		if requestErr == nil {
 			_ = response.Body.Close()
 		}
@@ -114,7 +138,7 @@ func TestConcurrentRequestsAndShutdownArbitration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	headers := http.Header{TokenHeader: []string{tokenFromLaunchURL(t, launch.URL())}}
+	client := launch.Client()
 	var requests sync.WaitGroup
 	requestErrors := make(chan error, 32)
 	for range 32 {
@@ -126,8 +150,7 @@ func TestConcurrentRequestsAndShutdownArbitration(t *testing.T) {
 				requestErrors <- requestErr
 				return
 			}
-			request.Header = headers.Clone()
-			response, requestErr := http.DefaultClient.Do(request)
+			response, requestErr := client.Do(request)
 			if requestErr != nil {
 				requestErrors <- requestErr
 				return
@@ -204,7 +227,7 @@ func TestCanceledContextDoesNotBind(t *testing.T) {
 	server, err := newServer(Options{Handler: http.NotFoundHandler()}, realClock{}, func(string, string) (net.Listener, error) {
 		listened.Store(true)
 		return nil, errors.New("unexpected")
-	}, strings.NewReader(strings.Repeat("x", 32)))
+	}, strings.NewReader(strings.Repeat("x", 112)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,13 +243,23 @@ func TestConstructionAndListenFailures(t *testing.T) {
 	if _, err := New(Options{}); err == nil || !strings.Contains(err.Error(), "handler is required") {
 		t.Fatalf("missing handler error = %v", err)
 	}
-	if _, err := newServer(Options{Handler: http.NotFoundHandler()}, realClock{}, nil, strings.NewReader("short")); err == nil || !strings.Contains(err.Error(), "generate launch token") {
-		t.Fatalf("entropy error = %v", err)
+	for _, test := range []struct {
+		bytes int
+		want  string
+	}{
+		{bytes: 0, want: "generate bootstrap credential"},
+		{bytes: 32, want: "generate browser session credential"},
+		{bytes: 64, want: "generate programmatic credential"},
+		{bytes: 96, want: "generate launch origin"},
+	} {
+		if _, err := newServer(Options{Handler: http.NotFoundHandler()}, realClock{}, nil, strings.NewReader(strings.Repeat("x", test.bytes))); err == nil || !strings.Contains(err.Error(), test.want) {
+			t.Fatalf("entropy bytes %d error = %v, want %q", test.bytes, err, test.want)
+		}
 	}
 	want := errors.New("address unavailable")
 	server, err := newServer(Options{Handler: http.NotFoundHandler()}, realClock{}, func(string, string) (net.Listener, error) {
 		return nil, want
-	}, strings.NewReader(strings.Repeat("n", 32)))
+	}, strings.NewReader(strings.Repeat("n", 112)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +284,7 @@ func TestUnexpectedServeFailureIsReported(t *testing.T) {
 	want := errors.New("accept failed")
 	server, err := newServer(Options{Handler: http.NotFoundHandler()}, realClock{}, func(string, string) (net.Listener, error) {
 		return failingListener{address: &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 45678}, err: want}, nil
-	}, strings.NewReader(strings.Repeat("e", 32)))
+	}, strings.NewReader(strings.Repeat("e", 112)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,5 +298,61 @@ func TestUnexpectedServeFailureIsReported(t *testing.T) {
 	}
 	if result.Reason != ShutdownServerError {
 		t.Fatalf("reason = %q", result.Reason)
+	}
+}
+
+func TestHTTPServerSecurityBounds(t *testing.T) {
+	server, err := New(Options{Handler: http.NotFoundHandler()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := server.Start(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
+	server.mu.Lock()
+	httpServer := server.httpServer
+	server.mu.Unlock()
+	if httpServer.ReadHeaderTimeout != 5*time.Second || httpServer.IdleTimeout != defaultIdleTimeout || httpServer.MaxHeaderBytes != defaultMaxHeaderBytes {
+		t.Fatalf("HTTP server bounds = header %s, idle %s, bytes %d", httpServer.ReadHeaderTimeout, httpServer.IdleTimeout, httpServer.MaxHeaderBytes)
+	}
+}
+
+func TestOversizedRequestHeadersNeverReachApplication(t *testing.T) {
+	var applicationRequests atomic.Int32
+	server, err := New(Options{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		applicationRequests.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	})})
+	if err != nil {
+		t.Fatal(err)
+	}
+	launch, err := server.Start(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = launch.Shutdown(context.Background()) })
+
+	connection, err := net.DialTimeout("tcp", launch.Address(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer connection.Close()
+	if err := connection.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	host := strings.TrimSuffix(strings.TrimPrefix(launch.BaseURL(), "http://"), "/")
+	request := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\nX-Oversized: %s\r\n\r\n", host, strings.Repeat("a", defaultMaxHeaderBytes+(16<<10)))
+	if _, err := io.WriteString(connection, request); err != nil {
+		t.Fatal(err)
+	}
+	response, err := http.ReadResponse(bufio.NewReader(connection), &http.Request{Method: http.MethodGet})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusRequestHeaderFieldsTooLarge || applicationRequests.Load() != 0 {
+		t.Fatalf("oversized header response = %d, application requests = %d", response.StatusCode, applicationRequests.Load())
 	}
 }

@@ -11,5 +11,6 @@
 - Roadmap briefs: `docs/dev/roadmap-items/<id>.md` using stable kebab-case IDs.
 - Active ExecPlans, when needed: `docs/dev/plans/NNN-short-title.md`, with monotonic zero-padded IDs.
 - Planned behavior must be labelled proposed and never documented as implemented.
+- No implementation ExecPlan is active. The completed v0.2.0 security outcomes live in the v0.2 spec, decisions, architecture, changelog, migration guide, and release governance.
 - Behavior or wire changes update the normative spec; ownership changes update architecture; compatibility/release changes update changelog, decisions, and release governance.
 - Remove completed roadmap items and stale ExecPlans after durable outcomes move to long-lived docs.

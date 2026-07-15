@@ -4,27 +4,22 @@ import test from "node:test";
 import {
   SingleserveError,
   TAB_HEADER,
-  TOKEN_HEADER,
-  TOKEN_STORAGE_KEY,
   connect,
 } from "./singleserve.js";
-
-class MemoryStorage {
-  values = new Map();
-
-  getItem(key) {
-    return this.values.get(key) ?? null;
-  }
-
-  setItem(key, value) {
-    this.values.set(key, String(value));
-  }
-}
 
 class FakeWindow {
   constructor(href) {
     this.location = { href };
-    this.sessionStorage = new MemoryStorage();
+    Object.defineProperty(this, "sessionStorage", {
+      get() {
+        throw new Error("sessionStorage must not be accessed");
+      },
+    });
+    Object.defineProperty(this, "localStorage", {
+      get() {
+        throw new Error("localStorage must not be accessed");
+      },
+    });
     this.history = {
       state: { preserved: true },
       replacements: [],
@@ -68,8 +63,8 @@ async function withWindow(href, run) {
   }
 }
 
-test("connect scrubs and retains the launch token and authenticates same-origin requests", async () => {
-  await withWindow("http://127.0.0.1:8123/app?singleserve_token=launch-secret&view=one#section", async (browser) => {
+test("connect keeps credentials out of JavaScript and authenticates with the session cookie", async () => {
+  await withWindow("http://ss-test.localhost:8123/app?view=one#section", async (browser) => {
     const calls = [];
     const heartbeats = [];
     const session = await connect({
@@ -81,14 +76,11 @@ test("connect scrubs and retains the launch token and authenticates same-origin 
       onHeartbeat: (heartbeat) => heartbeats.push(heartbeat),
     });
 
-    assert.equal(session.token, "launch-secret");
-    assert.equal(browser.sessionStorage.getItem(TOKEN_STORAGE_KEY), "launch-secret");
-    assert.deepEqual(browser.history.replacements, [
-      { state: { preserved: true }, unused: "", url: "/app?view=one#section" },
-    ]);
+    assert.equal(Object.hasOwn(session, "token"), false);
+    assert.deepEqual(browser.history.replacements, []);
     assert.match(session.tabID, /^[A-Za-z0-9_-]{22}$/);
     assert.equal(calls[0].input, "/_singleserve/tabs/heartbeat");
-    assert.equal(calls[0].init.headers.get(TOKEN_HEADER), "launch-secret");
+    assert.equal(calls[0].init.headers.get("X-Singleserve-Token"), null);
     assert.equal(calls[0].init.headers.get(TAB_HEADER), session.tabID);
     assert.equal(calls[0].init.credentials, "same-origin");
     assert.equal(heartbeats.length, 1);
@@ -97,35 +89,38 @@ test("connect scrubs and retains the launch token and authenticates same-origin 
     assert.equal(heartbeats[0].tabID, session.tabID);
     assert.ok(heartbeats[0].checkedAt instanceof Date);
 
-    await session.fetch("/api/items", { headers: { Accept: "application/json" } });
+    await session.fetch("/api/items", {
+      credentials: "omit",
+      headers: { Accept: "application/json", "X-Singleserve-Token": "stale-secret" },
+    });
     assert.equal(calls[1].input, "/api/items");
     assert.equal(calls[1].init.headers.get("Accept"), "application/json");
-    assert.equal(calls[1].init.headers.get(TOKEN_HEADER), "launch-secret");
+    assert.equal(calls[1].init.headers.get("X-Singleserve-Token"), null);
+    assert.equal(calls[1].init.credentials, "same-origin");
     session.stop();
     assert.equal((browser.listeners.get("pagehide") ?? []).length, 0);
   });
 });
 
-test("stored tokens authenticate reloads without exposing a query token", async () => {
-  await withWindow("http://localhost:9000/", async (browser) => {
-    browser.sessionStorage.setItem(TOKEN_STORAGE_KEY, "stored-secret");
-    let token;
+test("reload startup relies on browser-managed cookies without reading storage", async () => {
+  await withWindow("http://ss-reload.localhost:9000/", async (browser) => {
+    let credentials;
     const session = await connect({
       fetch: async (_input, init) => {
-        token = init.headers.get(TOKEN_HEADER);
+        credentials = init.credentials;
         return ok();
       },
       heartbeatIntervalMS: 60_000,
     });
-    assert.equal(session.token, "stored-secret");
-    assert.equal(token, "stored-secret");
+    assert.equal(Object.hasOwn(session, "token"), false);
+    assert.equal(credentials, "same-origin");
     assert.deepEqual(browser.history.replacements, []);
     session.stop();
   });
 });
 
 test("authenticated fetch refuses to send credentials cross-origin", async () => {
-  await withWindow("http://localhost:9000/?singleserve_token=secret", async () => {
+  await withWindow("http://ss-test.localhost:9000/", async () => {
     let calls = 0;
     const session = await connect({
       fetch: async () => {
@@ -144,7 +139,7 @@ test("authenticated fetch refuses to send credentials cross-origin", async () =>
 });
 
 test("shutdown denials surface stable status and application code", async () => {
-  await withWindow("http://localhost:9000/?singleserve_token=secret", async () => {
+  await withWindow("http://ss-test.localhost:9000/", async () => {
     const session = await connect({
       fetch: async (input) => {
         if (String(input).endsWith("/shutdown")) {
@@ -163,7 +158,7 @@ test("shutdown denials surface stable status and application code", async () => 
 });
 
 test("heartbeat failure callback fires once at the configured threshold", async () => {
-  await withWindow("http://localhost:9000/?singleserve_token=secret", async () => {
+  await withWindow("http://ss-test.localhost:9000/", async () => {
     let callbacks = 0;
     let resolveUnavailable;
     const unavailable = new Promise((resolve) => {
@@ -194,7 +189,7 @@ test("heartbeat failure callback fires once at the configured threshold", async 
 });
 
 test("a successful heartbeat resets consecutive failures", async () => {
-  await withWindow("http://localhost:9000/?singleserve_token=secret", async () => {
+  await withWindow("http://ss-test.localhost:9000/", async () => {
     const health = [false, true, false, false];
     const observedFailures = [];
     let calls = 0;
@@ -226,7 +221,7 @@ test("a successful heartbeat resets consecutive failures", async () => {
 });
 
 test("pagehide emits an idempotent keepalive disconnect", async () => {
-  await withWindow("http://localhost:9000/?singleserve_token=secret", async (browser) => {
+  await withWindow("http://ss-test.localhost:9000/", async (browser) => {
     const calls = [];
     const session = await connect({
       fetch: async (input, init) => {

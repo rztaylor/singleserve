@@ -19,6 +19,7 @@ fi
 
 go mod tidy -diff
 node --check examples/minimal/static/app.js
+node --check client/playwright-driver.mjs
 go build -o "$repo_root/.cache/minimal-demo" ./examples/minimal
 go test -run '^TestSmoke$' -count=1 ./examples/minimal
 go test ./...
@@ -31,7 +32,7 @@ awk -v coverage="$coverage" 'BEGIN { if (coverage + 0 < 80) exit 1 }' || {
     exit 1
 }
 go vet ./...
-node --test client/singleserve.test.mjs
+node --test client/*.test.mjs
 git diff --check
 
 echo "repository checks: ok (${coverage}% Go statement coverage)"

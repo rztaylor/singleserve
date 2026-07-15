@@ -50,14 +50,14 @@ func TestBrowserBoundConsumerHarness(t *testing.T) {
 	}
 
 	client := browserClient(t)
-	baseURL, token := bootstrapConsumer(t, client, launch.URL())
+	baseURL := bootstrapConsumer(t, client, launch.URL())
 	tab := tabID(1)
-	response := controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/tabs/heartbeat", token, tab)
+	response := controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/tabs/heartbeat", tab)
 	response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("heartbeat status = %d", response.StatusCode)
 	}
-	response = controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/tabs/disconnect", token, tab)
+	response = controlRequest(t, client, http.MethodPost, baseURL+"/_singleserve/tabs/disconnect", tab)
 	response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		t.Fatalf("disconnect status = %d", response.StatusCode)

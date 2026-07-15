@@ -18,7 +18,12 @@ import (
 
 type listenFunc func(network, address string) (net.Listener, error)
 
-const defaultDrainTimeout = 5 * time.Second
+const (
+	defaultDrainTimeout     = 5 * time.Second
+	defaultBootstrapTimeout = 2 * time.Minute
+	defaultIdleTimeout      = 30 * time.Second
+	defaultMaxHeaderBytes   = 64 << 10
+)
 
 // ErrAlreadyStarted reports an attempt to start a single-use Server twice.
 var ErrAlreadyStarted = errors.New("singleserve: server already started")
@@ -40,18 +45,26 @@ type Server struct {
 	lifetime     LifetimePolicy
 	guard        ShutdownGuard
 	opener       BrowserOpener
-	token        string
+	sessionToken string
+	programToken string
+	originHost   string
 	cookie       string
 	tabs         *tabRegistry
 	clock        clock
 	listen       listenFunc
 	drainTimeout time.Duration
 
+	authMu             sync.Mutex
+	entropy            io.Reader
+	bootstrapToken     string
+	launchURL          string
+	bootstrapConsumed  bool
+	bootstrapExpiresAt time.Time
+
 	mu           sync.Mutex
 	started      bool
 	startedAt    time.Time
 	baseURL      string
-	launchURL    string
 	httpServer   *http.Server
 	lifecycleCtx context.Context
 	cancel       context.CancelFunc
@@ -106,40 +119,64 @@ func newServer(options Options, runtimeClock clock, listen listenFunc, entropy i
 	if entropy == nil {
 		entropy = rand.Reader
 	}
-	token, err := generateToken(entropy)
+	bootstrapToken, err := generateToken(entropy)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("singleserve: generate bootstrap credential: %w", err)
+	}
+	sessionToken, err := generateToken(entropy)
+	if err != nil {
+		return nil, fmt.Errorf("singleserve: generate browser session credential: %w", err)
+	}
+	programToken, err := generateToken(entropy)
+	if err != nil {
+		return nil, fmt.Errorf("singleserve: generate programmatic credential: %w", err)
+	}
+	originHost, err := generateOriginHost(entropy)
+	if err != nil {
+		return nil, fmt.Errorf("singleserve: generate launch origin: %w", err)
 	}
 	opener := options.Opener
 	if opener == nil {
 		opener = systemBrowserOpener{}
 	}
 	return &Server{
-		handler:      options.Handler,
-		address:      address,
-		lifetime:     options.Lifetime,
-		guard:        options.Guard,
-		opener:       opener,
-		token:        token,
-		cookie:       cookieName(token),
-		tabs:         newTabRegistry(),
-		clock:        runtimeClock,
-		listen:       listen,
-		drainTimeout: defaultDrainTimeout,
+		handler:        options.Handler,
+		address:        address,
+		lifetime:       options.Lifetime,
+		guard:          options.Guard,
+		opener:         opener,
+		entropy:        entropy,
+		bootstrapToken: bootstrapToken,
+		sessionToken:   sessionToken,
+		programToken:   programToken,
+		originHost:     originHost,
+		cookie:         cookieName(sessionToken),
+		tabs:           newTabRegistry(),
+		clock:          runtimeClock,
+		listen:         listen,
+		drainTimeout:   defaultDrainTimeout,
 	}, nil
 }
 
 func generateToken(entropy io.Reader) (string, error) {
 	var value [32]byte
 	if _, err := io.ReadFull(entropy, value[:]); err != nil {
-		return "", fmt.Errorf("singleserve: generate launch token: %w", err)
+		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(value[:]), nil
 }
 
+func generateOriginHost(entropy io.Reader) (string, error) {
+	var value [16]byte
+	if _, err := io.ReadFull(entropy, value[:]); err != nil {
+		return "", err
+	}
+	return "ss-" + hex.EncodeToString(value[:]) + ".localhost", nil
+}
+
 func cookieName(token string) string {
 	digest := sha256.Sum256([]byte(token))
-	return "singleserve_" + hex.EncodeToString(digest[:12])
+	return "__Host-singleserve_" + hex.EncodeToString(digest[:12])
 }
 
 // Start binds the configured listener and starts serving before returning.
@@ -170,16 +207,21 @@ func (s *Server) Start(ctx context.Context) (*Launch, error) {
 	}
 	lifecycleCtx, cancel := context.WithCancel(context.Background())
 	startedAt := s.clock.Now()
+	s.authMu.Lock()
+	s.bootstrapExpiresAt = startedAt.Add(defaultBootstrapTimeout)
+	s.launchURL = launchURL
+	s.authMu.Unlock()
 	httpServer := &http.Server{
 		Addr:              listener.Addr().String(),
 		Handler:           s.authenticatedHandler(baseURL),
 		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       defaultIdleTimeout,
+		MaxHeaderBytes:    defaultMaxHeaderBytes,
 	}
 
 	s.mu.Lock()
 	s.startedAt = startedAt
 	s.baseURL = baseURL
-	s.launchURL = launchURL
 	s.httpServer = httpServer
 	s.lifecycleCtx = lifecycleCtx
 	s.cancel = cancel
@@ -208,19 +250,28 @@ func (s *Server) urls(address net.Addr) (string, string, error) {
 	if address == nil {
 		return "", "", fmt.Errorf("singleserve: listener has no address")
 	}
-	host, port, err := net.SplitHostPort(address.String())
+	_, port, err := net.SplitHostPort(address.String())
 	if err != nil {
 		return "", "", fmt.Errorf("singleserve: parse listener address: %w", err)
 	}
-	if host == "" || host == "::" {
-		host = "127.0.0.1"
+	base := url.URL{Scheme: "http", Host: net.JoinHostPort(s.originHost, port), Path: "/"}
+	launchURL, err := browserBootstrapURL(base.String(), s.bootstrapToken)
+	if err != nil {
+		return "", "", err
 	}
-	base := url.URL{Scheme: "http", Host: net.JoinHostPort(host, port), Path: "/"}
-	launch := base
-	query := launch.Query()
-	query.Set("singleserve_token", s.token)
-	launch.RawQuery = query.Encode()
-	return base.String(), launch.String(), nil
+	return base.String(), launchURL, nil
+}
+
+func browserBootstrapURL(baseURL, token string) (string, error) {
+	launch, err := url.Parse(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("singleserve: parse launch base URL: %w", err)
+	}
+	launch.Path = ControlPath + "bootstrap"
+	launch.RawPath = ""
+	launch.RawQuery = ""
+	launch.Fragment = token
+	return launch.String(), nil
 }
 
 func (s *Server) watchParent(parent context.Context) {
@@ -347,9 +398,43 @@ func (l *Launch) URL() string {
 	if l == nil || l.server == nil {
 		return ""
 	}
-	l.server.mu.Lock()
-	defer l.server.mu.Unlock()
+	l.server.authMu.Lock()
+	defer l.server.authMu.Unlock()
 	return l.server.launchURL
+}
+
+// NewBootstrapURL invalidates any earlier unconsumed bootstrap capability and
+// returns a fresh one-time browser URL that expires after two minutes. It does
+// not change the launch lifetime or invalidate an established browser session.
+// Treat the complete URL as a secret.
+func (l *Launch) NewBootstrapURL() (string, error) {
+	if l == nil || l.server == nil {
+		return "", fmt.Errorf("singleserve: nil launch")
+	}
+	s := l.server
+	s.mu.Lock()
+	active := s.httpServer != nil && !s.stopping
+	baseURL := s.baseURL
+	s.mu.Unlock()
+	if !active {
+		return "", fmt.Errorf("singleserve: launch is not running")
+	}
+
+	s.authMu.Lock()
+	defer s.authMu.Unlock()
+	token, err := generateToken(s.entropy)
+	if err != nil {
+		return "", fmt.Errorf("singleserve: generate bootstrap credential: %w", err)
+	}
+	launchURL, err := browserBootstrapURL(baseURL, token)
+	if err != nil {
+		return "", err
+	}
+	s.bootstrapToken = token
+	s.launchURL = launchURL
+	s.bootstrapConsumed = false
+	s.bootstrapExpiresAt = s.clock.Now().Add(defaultBootstrapTimeout)
+	return launchURL, nil
 }
 
 // OpenBrowser opens URL with the configured platform opener.

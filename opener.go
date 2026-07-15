@@ -83,7 +83,6 @@ func (o systemBrowserOpener) commands(rawURL string) []browserCommand {
 			commands = append(commands,
 				browserCommand{name: "wslview", args: []string{rawURL}},
 				browserCommand{name: "explorer.exe", args: []string{rawURL}},
-				browserCommand{name: "cmd.exe", args: []string{"/C", "start", "", rawURL}},
 			)
 		}
 		return append(commands,

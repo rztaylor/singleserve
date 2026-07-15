@@ -24,8 +24,8 @@ Singleserve Server -- binds loopback, authenticates, tracks tabs, owns shutdown
 | --- | --- | --- |
 | Listener | Validate and bind a loopback TCP address | Choose an optional loopback address |
 | HTTP router | Reserve and serve `/_singleserve/`; wrap the supplied handler | Construct all application routes |
-| Authentication | Generate and validate the per-launch token; bootstrap a launch-unique cookie | Avoid logging the token; use the client or documented headers |
-| Browser | Construct the authenticated URL and launch the OS browser on request | Decide whether and when to open it; report launch errors |
+| Authentication | Generate and rotate the single active bootstrap capability; own browser-session and programmatic credentials plus the isolated origin | Protect explicit browser URLs; decide whether to expose owner-controlled renewal; use `Launch.Client` for programmatic requests |
+| Browser | Serve and open the fixed clean bootstrap before consumer content | Decide whether and when to open it; report launch errors |
 | Presence | Track each browser-client tab heartbeat and disconnect | Choose explicit or browser-bound lifetime |
 | Shutdown | Evaluate guards, stop accepting work, and gracefully drain HTTP | Define guard conditions and clean up domain resources after `Wait` |
 | Frontend | Supply a plain ES-module lifecycle client | Choose framework, bundler, UI, routes, and assets |
@@ -33,19 +33,22 @@ Singleserve Server -- binds loopback, authenticates, tracks tabs, owns shutdown
 
 ## Package layout
 
-The v0.1 public surface is intentionally one package:
+The public surface remains intentionally one package:
 
 ```text
 github.com/rztaylor/singleserve
 ├── package singleserve          public server, policy, guard, result, and opener API
 ├── client/
+    ├── bootstrap.js             fixed exchange before consumer content
     ├── singleserve.js           canonical dependency-free ES module
-    ├── singleserve.test.mjs     Node built-in contract tests
-    └── package.json             module/test metadata; no dependencies
+    ├── *.test.mjs               Node built-in bootstrap and lifecycle tests
+    ├── playwright-driver.mjs    test-only adapter for hosted browser engines
+    └── package.json             module/test metadata; Playwright dev dependency
+├── browser_security_test.go    build-tagged real-browser release contract
 └── examples/minimal/            executable consumer and HTTP smoke fixture
 ```
 
-No project `cmd/` entrypoint is appropriate for a library. `examples/minimal` is an application-owned consumer demonstration, not a distributed Singleserve binary. No `pkg/` directory is needed because the module root is already the intentional import path. No `internal/` package is currently justified: root files remain cohesive around one lifecycle object, with private seams for time, entropy, listening, and platform commands. Future extraction must follow demonstrated ownership pressure rather than conceptual layering.
+No project `cmd/` entrypoint is appropriate for a library. `examples/minimal` is an application-owned consumer demonstration, not a distributed Singleserve binary. No `pkg/` directory is needed because the module root is already the intentional import path. Runtime files remain cohesive around one lifecycle object, with private seams for time, entropy, listening, and platform commands. `internal/testbrowserjar` exists only so repository-owned Go HTTP harnesses can model modern browsers accepting Secure `__Host-` cookies on trustworthy `.localhost` HTTP origins; production code does not import it. Future extraction must follow demonstrated ownership pressure rather than conceptual layering.
 
 ## Runtime state model
 
@@ -75,23 +78,27 @@ Tab tracking is active in both lifetime modes. Only browser-bound policy turns a
 
 ## Security model
 
-The v0.1 trust boundary assumes a single local user but does not assume every local process or web page is trusted.
+The implemented v0.2 source retains the single-local-user product boundary but does not trust remote pages, sibling loopback services, or unrelated local processes.
 
-- Binding is restricted to IP loopback addresses or `localhost`; wildcard and non-loopback names are rejected.
-- Each launch uses 32 bytes from `crypto/rand`, encoded with raw URL-safe base64.
-- Token comparison is constant time after equal-length validation.
-- A token-bearing initial safe navigation establishes a launch-unique, `HttpOnly`, `SameSite=Strict`, session cookie so application assets can load without query tokens.
-- The browser client also sends `X-Singleserve-Token` and `X-Singleserve-Tab` headers.
-- Query-token authentication is accepted only for `GET` and `HEAD`; the client removes it from the address bar immediately.
-- Browser-originated unsafe requests with an `Origin` that does not equal the launch origin are rejected.
-- Singleserve sends no permissive CORS headers.
-- Reserved endpoint responses are `Cache-Control: no-store` and never echo the launch token.
-- Singleserve-owned query, header, bearer, and cookie credentials are removed before delegation to application middleware; unrelated application credentials are preserved.
-- URLs containing the token are capabilities. Applications may print one for manual launch but must not persist it in diagnostics or logs.
+- Listener configuration accepts only `127.0.0.1`, `::1`, or `localhost`; every request must use the exact high-entropy `ss-<128-bit>.localhost:<port>` launch Host.
+- Each launch generates independent 256-bit bootstrap, browser-session, and programmatic credentials with `crypto/rand`; comparisons are constant time after exact length validation.
+- `Launch.URL()` puts the current two-minute, one-time bootstrap capability in a fragment. `Launch.NewBootstrapURL()` atomically replaces any earlier unconsumed capability and starts a fresh two-minute window without changing lifetime or session state. A fixed no-store/no-referrer page scrubs the fragment before exchange and replaces itself with `/` before consumer content runs.
+- Browser authentication thereafter uses only a host-isolated, `HttpOnly`, `Secure`, `SameSite=Strict`, non-persistent `__Host-` cookie. The prefix prevents related-domain injection; the lifecycle module reads no credential and uses no browser persistence.
+- `Launch.Client()` privately applies the independent programmatic header only to the exact clean origin, disables environment proxies, and refuses off-origin redirects.
+- Missing, invalid, duplicate, or ambiguous credentials fail closed. Browser-cookie unsafe methods and bootstrap exchange require the exact Origin; programmatic requests may omit Origin but cannot supply a mismatch.
+- Query and bearer authentication are removed. Singleserve removes its headers, session cookie, tab metadata, and legacy query keys before application delegation while preserving application credentials.
+- Control responses are non-cacheable and non-sensitive, control requests accept no body, and the HTTP server bounds header time, header bytes, and idle connections.
+- Opener commands receive the URL as one argument and never invoke a shell or command interpreter.
+
+### Known v0.1.0 browser-authentication limitation
+
+The v0.1.0 client persists the launch capability in script-readable `sessionStorage`, returns it as `session.token`, and relies on application JavaScript to scrub the launch URL. Its session cookie is launch-unique by name but host-scoped, so another service on a different port of the same loopback host can receive it. These are limitations of the released v0.1.0 design, not properties to preserve.
+
+The unreleased v0.2.0 source implements the replacement contract. A high-entropy hostname protects the cookie from ordinary sibling origins; knowledge of that hostname is capability-adjacent. `HttpOnly` prevents credential reads but does not stop trusted same-origin consumer code from issuing authenticated requests. Mandatory real-browser, test, vulnerability, static, supply-chain, and secret evidence remain release-blocking until the v0.2.0 candidate is validated and tagged; hosted CodeQL availability is defense-in-depth rather than a release property.
 
 ## Failure boundaries
 
-- Browser-launch failure does not stop the server; the application can show the manual URL.
+- Browser-launch failure does not stop the server; trusted owner code can issue and show a fresh manual URL. Singleserve does not provide or imply a renewal UI.
 - A client declares the server unreachable after three consecutive failed heartbeats, while the server independently expires a tab after its heartbeat timeout.
 - The browser client can report completed heartbeat observations to presentation code without giving the application control of scheduling or tab state.
 - A typed shutdown denial returns HTTP 409 with a stable code and user-safe message.
@@ -100,7 +107,7 @@ The v0.1 trust boundary assumes a single local user but does not assume every lo
 - HTTP drain timeout returns an error from `Wait`; application cleanup remains the consumer's responsibility.
 - A page may attempt `window.close()` after shutdown, but browser policy can reject closure of tabs not created by script; consumer UI must provide a terminal close-this-tab state.
 
-## Non-goals for v0.1
+## Non-goals for v0.2
 
 - non-loopback or remote access;
 - TLS and certificate management;

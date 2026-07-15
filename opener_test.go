@@ -34,7 +34,6 @@ func TestBrowserCommandsByPlatform(t *testing.T) {
 			want: []browserCommand{
 				{name: "wslview", args: []string{"http://localhost/"}},
 				{name: "explorer.exe", args: []string{"http://localhost/"}},
-				{name: "cmd.exe", args: []string{"/C", "start", "", "http://localhost/"}},
 				{name: "xdg-open", args: []string{"http://localhost/"}},
 				{name: "gio", args: []string{"open", "http://localhost/"}},
 				{name: "sensible-browser", args: []string{"http://localhost/"}},
@@ -95,7 +94,7 @@ func TestLaunchOpenBrowserIsOneShot(t *testing.T) {
 	if err := launch.OpenBrowser(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if opened != launch.URL() || !strings.Contains(opened, "singleserve_token=") {
+	if opened != launch.URL() || !strings.Contains(opened, ControlPath+"bootstrap#") {
 		t.Fatalf("opened URL = %q", opened)
 	}
 	if err := launch.OpenBrowser(context.Background()); !errors.Is(err, ErrBrowserAlreadyOpened) {
