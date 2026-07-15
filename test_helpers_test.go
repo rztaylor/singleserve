@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rztaylor/singleserve/internal/testbrowserjar"
+	"github.com/rztaylor/singleserve/internal/testtransport"
 )
 
 func mustRequest(t *testing.T, client *http.Client, method, rawURL string, headers http.Header) *http.Response {
@@ -41,9 +42,7 @@ func bootstrapTokenFromLaunchURL(t *testing.T, rawURL string) string {
 
 func newDirectClient(t *testing.T, withJar bool) *http.Client {
 	t.Helper()
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = nil
-	client := &http.Client{Transport: transport}
+	client := &http.Client{Transport: testtransport.New()}
 	if withJar {
 		client.Jar = newCookieJar(t)
 	}

@@ -9,15 +9,14 @@ import (
 
 	"github.com/rztaylor/singleserve"
 	"github.com/rztaylor/singleserve/internal/testbrowserjar"
+	"github.com/rztaylor/singleserve/internal/testtransport"
 )
 
 const consumerHarnessTimeout = time.Second
 
 func browserClient(t *testing.T) *http.Client {
 	t.Helper()
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = nil
-	return &http.Client{Jar: testbrowserjar.New(), Timeout: consumerHarnessTimeout, Transport: transport}
+	return &http.Client{Jar: testbrowserjar.New(), Timeout: consumerHarnessTimeout, Transport: testtransport.New()}
 }
 
 func bootstrapConsumer(t *testing.T, client *http.Client, launchURL string) (baseURL string) {

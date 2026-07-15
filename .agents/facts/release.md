@@ -2,7 +2,7 @@
 
 ## Maturity and support
 
-- Current maturity: v0.1.0 is supported; v0.2.0 is implemented but unreleased and unsupported until matching candidate evidence and tag exist.
+- Current maturity: v0.2.x is the supported release line; v0.2.0 introduced the released security contract, and each patch requires matching candidate evidence and a tag.
 - First release: `v0.1.0` after two representative repository-owned compatibility harnesses and explicit release authorization. Real-browser smoke is conditional on a supported browser and stable harness.
 - Supported release shape: Go module source, root package, and canonical browser ES module.
 - Unsupported: binaries, archives, checksums, signing, notarization, SBOMs, attestations, installers, npm, TLS, remote access, and hosted service claims.
@@ -21,8 +21,8 @@
 - Default validation: `scripts/check.sh`.
 - Release candidate: `scripts/release-check.sh <version>` plus the applicable specification gates.
 - Core auth, tab, lifetime, shutdown, race, and coverage gates cannot be skipped.
-- The historic v0.1 browser prerequisite skip remains documented. v0.2.0 requires one passing repository-owned Playwright Chromium contract at the exact candidate commit; CI is preferred and a recorded local run is an accepted fallback.
-- Extra engine/platform runs are not release prerequisites. The mandatory v0.2.0 Chromium evidence covers authentication, URL scrubbing, reload, multi-tab behavior, and sibling-loopback isolation.
+- The historic v0.1 browser prerequisite skip remains documented. v0.2.x requires one passing repository-owned Playwright Chromium contract at the exact candidate commit; CI is preferred and a recorded local run is an accepted fallback.
+- Extra engine/platform runs are not release prerequisites. The mandatory v0.2.x Chromium evidence covers authentication, URL scrubbing, reload, multi-tab behavior, and sibling-loopback isolation.
 - CodeQL remains hosted defense-in-depth. Any actionable result blocks release; unavailable hosted analysis alone does not block when the candidate's required browser, test, vulnerability, static, supply-chain, and secret checks pass.
 - Consumer migration is post-tag validation. Repository-owned compatibility harnesses guard the public API before release; a gap first demonstrated by SQLRise or another consumer is corrected in a subsequent patch release.
 - A manual, read-only hosted workflow can validate a release candidate but cannot tag or publish. No hosted publication workflow exists; tag, push, and GitHub Release creation require explicit permission.

@@ -57,7 +57,7 @@ Future consumers should adopt the released API and motivate changes only from re
 
 ## Migrating from v0.1.0 to v0.2.0
 
-v0.2.0 is a security-only, intentionally breaking pre-1.0 release. The repository implementation is not supported until a matching tag exists.
+v0.2.0 is the released security-only, intentionally breaking pre-1.0 replacement for v0.1.0. Use the latest v0.2.x patch release.
 
 ### Browser integration
 

@@ -17,9 +17,9 @@ The checked-in workflow at `.github/workflows/ci.yml` uses read-only permissions
 - Dependency-licence reporting, coverage upload, and release automation remain deferred until they have a demonstrated release need.
 - Required status-check and branch-protection configuration requires a real GitHub repository and explicit authorization.
 
-## v0.2.0 security CI
+## v0.2 security CI
 
-The v0.2.0 security plan promotes the following checks from optional follow-up to release requirements:
+The v0.2 release line promotes the following checks from optional follow-up to release requirements:
 
 - a repository-owned real-browser harness covering bootstrap and owner-controlled renewal, clean URL, no Web Storage, cookie reload, cross-origin rejection, and sibling-loopback isolation;
 - a pinned official Go vulnerability check with recorded database freshness;

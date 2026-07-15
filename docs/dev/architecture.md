@@ -45,10 +45,11 @@ github.com/rztaylor/singleserve
     ├── playwright-driver.mjs    test-only adapter for hosted browser engines
     └── package.json             module/test metadata; Playwright dev dependency
 ├── browser_security_test.go    build-tagged real-browser release contract
+├── internal/testtransport/     test-only browser-like .localhost resolution
 └── examples/minimal/            executable consumer and HTTP smoke fixture
 ```
 
-No project `cmd/` entrypoint is appropriate for a library. `examples/minimal` is an application-owned consumer demonstration, not a distributed Singleserve binary. No `pkg/` directory is needed because the module root is already the intentional import path. Runtime files remain cohesive around one lifecycle object, with private seams for time, entropy, listening, and platform commands. `internal/testbrowserjar` exists only so repository-owned Go HTTP harnesses can model modern browsers accepting Secure `__Host-` cookies on trustworthy `.localhost` HTTP origins; production code does not import it. Future extraction must follow demonstrated ownership pressure rather than conceptual layering.
+No project `cmd/` entrypoint is appropriate for a library. `examples/minimal` is an application-owned consumer demonstration, not a distributed Singleserve binary. No `pkg/` directory is needed because the module root is already the intentional import path. Runtime files remain cohesive around one lifecycle object, with private seams for time, entropy, listening, and platform commands. `internal/testbrowserjar` models modern browsers accepting Secure `__Host-` cookies on trustworthy `.localhost` HTTP origins, while `internal/testtransport` gives repository HTTP harnesses browser-like `.localhost` loopback resolution on every CI platform; production code imports neither. Future extraction must follow demonstrated ownership pressure rather than conceptual layering.
 
 ## Runtime state model
 
@@ -78,13 +79,13 @@ Tab tracking is active in both lifetime modes. Only browser-bound policy turns a
 
 ## Security model
 
-The implemented v0.2 source retains the single-local-user product boundary but does not trust remote pages, sibling loopback services, or unrelated local processes.
+The released v0.2 contract retains the single-local-user product boundary but does not trust remote pages, sibling loopback services, or unrelated local processes.
 
 - Listener configuration accepts only `127.0.0.1`, `::1`, or `localhost`; every request must use the exact high-entropy `ss-<128-bit>.localhost:<port>` launch Host.
 - Each launch generates independent 256-bit bootstrap, browser-session, and programmatic credentials with `crypto/rand`; comparisons are constant time after exact length validation.
 - `Launch.URL()` puts the current two-minute, one-time bootstrap capability in a fragment. `Launch.NewBootstrapURL()` atomically replaces any earlier unconsumed capability and starts a fresh two-minute window without changing lifetime or session state. A fixed no-store/no-referrer page scrubs the fragment before exchange and replaces itself with `/` before consumer content runs.
 - Browser authentication thereafter uses only a host-isolated, `HttpOnly`, `Secure`, `SameSite=Strict`, non-persistent `__Host-` cookie. The prefix prevents related-domain injection; the lifecycle module reads no credential and uses no browser persistence.
-- `Launch.Client()` privately applies the independent programmatic header only to the exact clean origin, disables environment proxies, and refuses off-origin redirects.
+- `Launch.Client()` privately applies the independent programmatic header only to the exact clean origin, disables environment proxies, refuses off-origin redirects, and dials the known listener address directly while preserving the isolated request Host.
 - Missing, invalid, duplicate, or ambiguous credentials fail closed. Browser-cookie unsafe methods and bootstrap exchange require the exact Origin; programmatic requests may omit Origin but cannot supply a mismatch.
 - Query and bearer authentication are removed. Singleserve removes its headers, session cookie, tab metadata, and legacy query keys before application delegation while preserving application credentials.
 - Control responses are non-cacheable and non-sensitive, control requests accept no body, and the HTTP server bounds header time, header bytes, and idle connections.
@@ -94,7 +95,7 @@ The implemented v0.2 source retains the single-local-user product boundary but d
 
 The v0.1.0 client persists the launch capability in script-readable `sessionStorage`, returns it as `session.token`, and relies on application JavaScript to scrub the launch URL. Its session cookie is launch-unique by name but host-scoped, so another service on a different port of the same loopback host can receive it. These are limitations of the released v0.1.0 design, not properties to preserve.
 
-The unreleased v0.2.0 source implements the replacement contract. A high-entropy hostname protects the cookie from ordinary sibling origins; knowledge of that hostname is capability-adjacent. `HttpOnly` prevents credential reads but does not stop trusted same-origin consumer code from issuing authenticated requests. Mandatory real-browser, test, vulnerability, static, supply-chain, and secret evidence remain release-blocking until the v0.2.0 candidate is validated and tagged; hosted CodeQL availability is defense-in-depth rather than a release property.
+The released v0.2 contract implements the replacement. A high-entropy hostname protects the cookie from ordinary sibling origins; knowledge of that hostname is capability-adjacent. `HttpOnly` prevents credential reads but does not stop trusted same-origin consumer code from issuing authenticated requests. Real-browser, test, vulnerability, static, supply-chain, and secret evidence remain release-blocking for v0.2.x patch candidates; hosted CodeQL availability is defense-in-depth rather than a release property.
 
 ## Failure boundaries
 
