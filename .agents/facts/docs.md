@@ -6,6 +6,7 @@
 - Durable decisions: `docs/dev/decisions.md`.
 - Normative specs: `docs/dev/specs/`.
 - Contributor guides and migration: `docs/dev/guides/`.
+- Consumer app integration guide: `docs/dev/guides/building-consumer-apps.md`.
 - Validation, CI, security, and release operations: `docs/dev/ops/`.
 - Active roadmap index: `docs/dev/roadmap.md`.
 - Roadmap briefs: `docs/dev/roadmap-items/<id>.md` using stable kebab-case IDs.

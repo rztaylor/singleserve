@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Added consumer app integration guidance with a README checklist and AI-assisted prompt block for wiring Singleserve health, heartbeat, guarded shutdown, backend-loss, and terminal close-tab behavior into Go/web applications.
+
 ## [0.2.1] - 2026-07-15
 
 ### Fixed

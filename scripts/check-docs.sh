@@ -31,6 +31,7 @@ docs/dev/roadmap.md
 docs/dev/specs/consumer-requirements.md
 docs/dev/specs/v0.1-api.md
 docs/dev/specs/v0.2-api.md
+docs/dev/guides/building-consumer-apps.md
 docs/dev/guides/development.md
 docs/dev/guides/migration.md
 docs/dev/ops/ci.md
