@@ -36,6 +36,8 @@ go run ./examples/minimal
 
 It starts a browser-bound loopback server and opens a live lifecycle dashboard. The page shows each heartbeat and its timestamp, the next-heartbeat countdown, consecutive failures, a manual health probe, backend-loss detection timing, and the normal/fallback tab-close shutdown windows. Shutting down or losing the backend moves the page into a terminal state and attempts to close the tab; if the browser blocks script closure, the page clearly asks the user to close it. Normal output identifies only the non-secret listener address. If browser opening fails, the command prints the authenticated URL once for manual opening. `Ctrl+C` remains an owner-forced shutdown path.
 
+When building a new application, treat `examples/minimal` as the canonical consumer integration pattern, not just a demo. The [consumer app guide](docs/dev/guides/building-consumer-apps.md) includes the required frontend/backend lifecycle checklist and a prompt block for AI-assisted builds.
+
 ## Usage
 
 The public Go API lives in the root package:
@@ -91,6 +93,20 @@ The application can import the dependency-free browser client directly from the 
 </script>
 ```
 
+### Consumer app checklist
+
+A Singleserve-backed Go/web application should wire the lifecycle details into its own UI:
+
+- import `connect` from `/_singleserve/client.js` and keep the returned session in the app's frontend state boundary;
+- use `session.fetch` for same-origin application API calls that need browser authentication;
+- observe backend health with `onHeartbeat`, `onServerUnavailable`, and optionally `session.health()`;
+- provide a user-facing quit or shutdown button that calls `session.requestShutdown()`;
+- show shutdown-denial messages from the application `ShutdownGuardFunc`;
+- enter a terminal stopped state after accepted shutdown or backend loss, call `session.stop()`, attempt `window.close()`, and tell the user to close the tab if the browser blocks it; and
+- verify initial launch, reload, clean new tab, last-tab close, guarded shutdown, backend loss, and manual URL fallback in a real browser before shipping.
+
+Do not parse `Launch.URL()`, expose Singleserve credentials, store lifecycle authentication in Web Storage, send `X-Singleserve-Token` from browser JavaScript, or implement replacement `/_singleserve/` control routes. See [Building consumer applications](docs/dev/guides/building-consumer-apps.md) for a copy-pasteable AI prompt checklist.
+
 In v0.2, `launch.URL()` opens a fixed Singleserve bootstrap page on a high-entropy per-launch `.localhost` origin. Its two-minute, one-time capability is carried only in the URL fragment, scrubbed before the network exchange, and replaced with a clean application URL before consumer content runs. Owner code may call `launch.NewBootstrapURL()` when it needs to replace an unconsumed or expired manual URL; consumers remain responsible for deciding whether their own interface exposes that recovery action. Reloads and new tabs use only a host-isolated, `HttpOnly`, `Secure`, `SameSite=Strict`, `__Host-` session cookie. The lifecycle client never reads or writes Web Storage and exposes no authentication capability.
 
 > **Security notice for v0.1.0:** its browser client stores the launch capability in script-readable `sessionStorage` and exposes it as `session.token`. That release is superseded by v0.2, which removes the weaker behavior rather than retaining a compatibility mode; see the [migration guide](docs/dev/guides/migration.md).
@@ -118,6 +134,7 @@ The client carries an independent private credential, bypasses environment proxi
 - [v0.1 consumer requirements](docs/dev/specs/consumer-requirements.md)
 - [v0.1 API specification and acceptance criteria](docs/dev/specs/v0.1-api.md)
 - [v0.2 security specification](docs/dev/specs/v0.2-api.md)
+- [Building consumer applications](docs/dev/guides/building-consumer-apps.md)
 - [Migration strategy](docs/dev/guides/migration.md)
 - [Roadmap](docs/dev/roadmap.md)
 - [Decisions and unresolved choices](docs/dev/decisions.md)
