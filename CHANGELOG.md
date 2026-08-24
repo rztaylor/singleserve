@@ -6,9 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-24
+
 ### Added
 
 - Added consumer app integration guidance with a README checklist and AI-assisted prompt block for wiring Singleserve health, heartbeat, guarded shutdown, backend-loss, and terminal close-tab behavior into Go/web applications.
+
+### Security
+
+- Raised the minimum toolchain to Go 1.26.6 after vulnerability scanning identified four reachable standard-library issues in Go 1.26.5: GO-2026-6090, GO-2026-6089, GO-2026-5972, and GO-2026-5026.
 
 ## [0.2.1] - 2026-07-15
 
@@ -65,7 +71,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Runnable `examples/minimal` executable specification with a live lifecycle dashboard, one application API, browser launch, observable heartbeat/health timing, backend and tab-close detection windows, terminal stopped state, shutdown, and CI smoke coverage using only the public API.
 - Browser-client `onHeartbeat` observation callback with status, consecutive failure count, tab ID, and completion timestamp for lifecycle presentation without duplicating heartbeat scheduling.
 
-[Unreleased]: https://github.com/rztaylor/singleserve/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/rztaylor/singleserve/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/rztaylor/singleserve/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/rztaylor/singleserve/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/rztaylor/singleserve/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rztaylor/singleserve/releases/tag/v0.1.0

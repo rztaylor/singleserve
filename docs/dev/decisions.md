@@ -146,7 +146,7 @@ The implementation greenlight accepted the following choices. They are now part 
 - Whether a later release should publish the browser client to npm with TypeScript declarations.
 - Whether a later release should expose tab event observers rather than snapshots only.
 - Whether configurable control prefixes are justified by a real route collision.
-- Whether minimum-Go support should expand below the declared Go 1.26.5 baseline.
+- Whether minimum-Go support should expand below the declared Go 1.26.6 baseline.
 - Whether GitHub tag/release-note automation is worthwhile after the first manual release.
 
 None of these questions should delay v0.1 implementation or add speculative API now.

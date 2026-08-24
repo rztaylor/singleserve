@@ -10,7 +10,7 @@ The supported release surface will be:
 - the root `singleserve` package;
 - the canonical browser ES module included in the module and served by the Go package;
 - documented behavior on macOS, Linux/WSL, and Windows; and
-- Go 1.26.5 as the minimum toolchain baseline; a security release may raise the patch floor to avoid a known toolchain vulnerability.
+- Go 1.26.6 as the minimum toolchain baseline; a security release may raise the patch floor to avoid a known toolchain vulnerability.
 
 Remote hosting, TLS, npm distribution, binaries, installers, signing, notarization, SBOMs, attestations, hosted services, and compatibility aliases are unsupported.
 
@@ -41,7 +41,7 @@ scripts/check.sh
 Release-candidate validation:
 
 ```sh
-scripts/release-check.sh v0.2.1
+scripts/release-check.sh v0.2.2
 ```
 
 For v0.2.x, the manual hosted candidate workflow runs that command with the pinned networked security scan and mandatory Playwright Chromium harness. CI is preferred, but a recorded local run at the exact candidate commit is an accepted fallback. Candidate validation fails closed when its browser, vulnerability database, or other required evidence is unavailable.
