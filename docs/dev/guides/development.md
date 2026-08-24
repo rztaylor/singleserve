@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- Go 1.26.5 or newer within the declared 1.26 release line;
+- Go 1.26.6 or newer within the declared 1.26 release line;
 - POSIX shell for repository scripts;
 - Git for diff checks; and
 - Node.js 24 or newer for dependency-free browser-client tests; and
@@ -19,7 +19,7 @@ Ordinary checks require no network, npm install, Docker, database, browser, or e
 ```sh
 scripts/check-docs.sh
 scripts/check.sh
-SINGLESERVE_BROWSER_BACKEND=playwright SINGLESERVE_BROWSER_NAME=chromium scripts/release-check.sh v0.2.1
+SINGLESERVE_BROWSER_BACKEND=playwright SINGLESERVE_BROWSER_NAME=chromium scripts/release-check.sh v0.2.2
 go run ./examples/minimal
 ```
 
