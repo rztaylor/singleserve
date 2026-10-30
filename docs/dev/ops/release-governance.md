@@ -10,7 +10,7 @@ The supported release surface will be:
 - the root `singleserve` package;
 - the canonical browser ES module included in the module and served by the Go package;
 - documented behavior on macOS, Linux/WSL, and Windows; and
-- Go 1.26.6 as the minimum toolchain baseline; a security release may raise the patch floor to avoid a known toolchain vulnerability.
+- Go 1.26.10 as the minimum toolchain baseline; a security release may raise the patch floor to avoid a known toolchain vulnerability.
 
 Remote hosting, TLS, npm distribution, binaries, installers, signing, notarization, SBOMs, attestations, hosted services, and compatibility aliases are unsupported.
 
