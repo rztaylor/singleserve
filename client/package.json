@@ -9,6 +9,6 @@
     "test": "node --check playwright-driver.mjs && node --test *.test.mjs"
   },
   "devDependencies": {
-    "playwright": "1.61.1"
+    "playwright": "1.62.1"
   }
 }
