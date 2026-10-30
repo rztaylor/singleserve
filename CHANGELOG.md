@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Security
+
+- Raised the minimum toolchain to Go 1.26.10 after vulnerability scanning identified ten reachable standard-library issues in Go 1.26.6: GO-2026-6809, GO-2026-6617, GO-2026-6613, GO-2026-6612, GO-2026-6611, GO-2026-6610, GO-2026-6608, GO-2026-6607, GO-2026-6605, and GO-2026-6603.
+
 ## [0.2.2] - 2026-08-24
 
 ### Added
