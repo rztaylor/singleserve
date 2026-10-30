@@ -6,7 +6,7 @@
 
 ## Prerequisites
 
-- Go 1.26.6 or newer within the declared 1.26 release line;
+- Go 1.26.10 or newer within the declared 1.26 release line;
 - POSIX shell for repository scripts;
 - Git for diff checks; and
 - Node.js 24 or newer for dependency-free browser-client tests; and
